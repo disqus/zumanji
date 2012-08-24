@@ -26,7 +26,10 @@
       <tr>
         <th style="width:60px; text-align:right">ID</th>
         <th>Test</th>
-        <th style="width:100px; text-align:center;">Duration</th>
+        <th style="width:60px; text-align:center;">Cache</th>
+        <th style="width:60px; text-align:center;">Redis</th>
+        <th style="width:60px; text-align:center;">SQL</th>
+        <th style="width:60px; text-align:center;">Duration</th>
       </tr>
     </thead>
     <tbody>
@@ -37,12 +40,23 @@
   <pre>{{ test.data|pprint }}</pre>
 
   {% if trace %}
-    <h3>Trace</h3>
-    <ol>
+    <h3>Trace <small>{{ trace|length }} calls</small></h3>
+    <table class="table table-bordered table-striped">
+      <thead>
+        <th style="width:100px; text-align:right;">Interface</th>
+        <th>Command</th>
+        <th style="width:60px; text-align:center;">Duration</th>
+      </thead>
+      </thead>
+      <tbody>
       {% for call in trace %}
-        <li>{{ call.time }} &mdash; {{ call.function }} ({{ call.duration|floatformat:3 }} s)</li>
+        <tr>
+          <td style="text-align:right;">{{ call.interface }}</td>
+          <td style="padding-left: {{ call.depth }}px;">{{ call.command|truncatechars:100 }} {{ call.args|truncatechars:50 }}</td>
+          <td style="text-align:center;">{{ call.duration|floatformat:3 }} s</td>
+        </tr>
       {% endfor %}
-    </ol>
+    </table>
   {% endif %}
 
 {% endblock %}

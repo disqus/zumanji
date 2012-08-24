@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 zumanji
-=========
+=======
 
 :copyright: (c) 2012 DISQUS
 :license: Apache License 2.0, see LICENSE for more details.
@@ -44,11 +44,6 @@ setup(
     test_suite='runtests.runtests',
     license='Apache License 2.0',
     include_package_data=True,
-    # entry_points={
-    #     'console_scripts': [
-    #         'sentry = sentry.utils.runner:main',
-    #     ],
-    # },
     classifiers=[
         'Framework :: Django',
         'Intended Audience :: Developers',

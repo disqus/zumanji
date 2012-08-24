@@ -1,5 +1,8 @@
 <tr>
   <td style="text-align:right;"><a href="{% url zumanji:view_test test_id=test.id %}">T{{ test.id }}</a></td>
   <td>{{ test.label }}</td>
-  <td style="text-align:center;">{{ test.duration|floatformat:3 }} s</td>
+  <td style="text-align:center;">{{ test.data.cache.duration|floatformat:2 }} s<br><small>{{ test.data.cache.calls }} calls</small></td>
+  <td style="text-align:center;">{{ test.data.redis.duration|floatformat:2 }} s<br><small>{{ test.data.redis.calls }} calls</small></td>
+  <td style="text-align:center;">{{ test.data.sql.duration|floatformat:2 }} s<br><small>{{ test.data.sql.calls }} calls</small></td>
+  <td style="text-align:center;">{{ test.duration|floatformat:2 }} s</td>
 </tr>

@@ -1,4 +1,5 @@
 import datetime
+import itertools
 import os.path
 from collections import defaultdict
 from django.db import transaction
@@ -22,8 +23,23 @@ def regroup_tests(tests):
 def format_data(interface, data):
     stacktrace = data['stacktrace'][0]
 
+    if interface == 'sql':
+        command = data['query']
+        args = data['query_params']
+    elif interface in ('redis', 'pipelined_redis'):
+        command = data['command']
+        args = [data['other_args']]
+    elif interface == 'cache':
+        command = data['action']
+        args = [data['key']]
+    else:
+        command = (stacktrace['name'], stacktrace['function_name'])
+        args = []
+
     return {
         'interface': interface,
+        'command': command,
+        'args': args,
         'line': stacktrace['line_number'],
         'code': stacktrace['code'],
         'function': stacktrace['function_name'],
@@ -31,6 +47,7 @@ def format_data(interface, data):
         'filename': stacktrace['file_name'],
         'duration': data['duration'],
         'time': data['time'],
+        'depth': len(data['stacktrace']),
     }
 
 
@@ -75,17 +92,8 @@ class Command(BaseCommand):
                 for test_data in tests:
                     group_durations.append(test_data['duration'])
 
-                    test = Test.objects.get_or_create(
-                        group=group,
-                        label=test_data['id'],
-                        defaults=dict(
-                            duration=test_data['duration'],
-                            data=test_data['api_data'],
-                        )
-                    )[0]
-
                     data = []
-                    for key in ('redis', 'sql', 'cache'):
+                    for key in ('pipelined_redis', 'redis', 'sql', 'cache'):
                         if not test_data.get(key):
                             continue
                         for chunk in test_data[key]:
@@ -94,6 +102,41 @@ class Command(BaseCommand):
                             data.append((ts, key, chunk))
 
                     data = [format_data(*d[1:]) for d in sorted(data, key=lambda x: x[0])]
+
+                    redis_calls = len(test_data.get('redis', [])) + len(test_data.get('redis_pipelined', []))
+                    redis_time = sum(t['duration'] for t in itertools.chain(test_data.get('redis', []), test_data.get('redis_pipelined', [])))
+                    cache_calls = len(test_data.get('cache', []))
+                    cache_times = sum(t['duration'] for t in test_data.get('cache', []))
+                    sql_calls = len(test_data.get('sql', []))
+                    sql_time = sum(t['duration'] for t in test_data.get('sql', []))
+
+                    extra_data = {
+                        'api_data': test_data['api_data'],
+                        'redis': {
+                            'calls': redis_calls,
+                            'duration': redis_time,
+                        },
+                        'sql': {
+                            'calls': sql_calls,
+                            'duration': sql_time,
+                        },
+                        'cache': {
+                            'calls': cache_calls,
+                            'duration': cache_times,
+                        },
+                    }
+
+                    test, created = Test.objects.get_or_create(
+                        group=group,
+                        label=test_data['id'],
+                        defaults=dict(
+                            duration=test_data['duration'],
+                            data=extra_data,
+                        )
+                    )
+                    if not created and test.data != extra_data:
+                        test.data = extra_data
+                        test.save()
 
                     td, created = TestData.objects.get_or_create(
                         test=test,
@@ -127,4 +170,4 @@ class Command(BaseCommand):
             )
 
             transaction.commit()
-            self.stdout.write('Imported %r (build_id=%r)' % (json_file, build.id))
+            self.stdout.write('Imported %r (build_id=%r)\n' % (json_file, build.id))
