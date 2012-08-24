@@ -37,6 +37,10 @@
     </tbody>
   </table>
 
+  {% if test.description %}
+    <blockquote>{{ test.description|linebreaks }}</blockquote>
+  {% endif %}
+
   <pre>{{ test.data|pprint }}</pre>
 
   {% if trace %}

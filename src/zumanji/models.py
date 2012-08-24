@@ -84,6 +84,7 @@ class Test(models.Model, TestMixin):
     group = models.ForeignKey(TestGroup)
     label = models.CharField(max_length=255)
     duration = models.FloatField(default=0.0)
+    description = models.TextField(null=True)
     data = JSONField(default={})
 
     class Meta:

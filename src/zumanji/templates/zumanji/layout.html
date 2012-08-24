@@ -15,6 +15,20 @@
       body {
         padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
       }
+      blockquote p {
+        margin-bottom: 10px;
+      }
+      footer {
+        background: #f9f9f9;
+        color: #666;
+        font-size: 0.9em;
+        text-align: center;
+        padding: 30px;
+      }
+      footer a {
+        font-weight: bold;
+      }
+
     </style>
     <link href="{{ STATIC_URL }}zumanji//css/bootstrap-responsive.css" rel="stylesheet">
 
@@ -48,6 +62,15 @@
       {% block content %}
       {% endblock %}
     </div> <!-- /container -->
+
+
+    <footer>
+        <div class="container">
+            {% block footer %}
+                <a href="https://github.com/disqus/zumanji">Zumanji</a> is Open Source Software | Inspired by the work of <a href="http://twitter.com/zmanji">@zmanji</a>, the greatest <a href="http://code.disqus.com">DISQUS</a> intern of all time.
+            {% endblock %}
+        </div>
+    </footer>
 
     <!-- Le javascript
     ================================================== -->

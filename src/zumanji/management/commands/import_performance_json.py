@@ -1,5 +1,4 @@
 import datetime
-import itertools
 import os.path
 from collections import defaultdict
 from django.db import transaction
@@ -93,43 +92,28 @@ class Command(BaseCommand):
                     group_durations.append(test_data['duration'])
 
                     data = []
-                    for key in ('pipelined_redis', 'redis', 'sql', 'cache'):
-                        if not test_data.get(key):
-                            continue
-                        for chunk in test_data[key]:
-                            ts = datetime.datetime.strptime(chunk['time'], '%Y-%m-%dT%H:%M:%S.%f')
+                    extra_data = defaultdict(lambda: {
+                        'calls': 0,
+                        'duration': 0.0,
+                    })
 
-                            data.append((ts, key, chunk))
+                    for interface, values in test_data.get('interfaces', {}).iteritems():
+                        for item in values:
+                            ts = datetime.datetime.strptime(item['time'], '%Y-%m-%dT%H:%M:%S.%f')
+
+                            data.append((ts, interface, item))
 
                     data = [format_data(*d[1:]) for d in sorted(data, key=lambda x: x[0])]
 
-                    redis_calls = len(test_data.get('redis', [])) + len(test_data.get('redis_pipelined', []))
-                    redis_time = sum(t['duration'] for t in itertools.chain(test_data.get('redis', []), test_data.get('redis_pipelined', [])))
-                    cache_calls = len(test_data.get('cache', []))
-                    cache_times = sum(t['duration'] for t in test_data.get('cache', []))
-                    sql_calls = len(test_data.get('sql', []))
-                    sql_time = sum(t['duration'] for t in test_data.get('sql', []))
-
-                    extra_data = {
-                        'api_data': test_data['api_data'],
-                        'redis': {
-                            'calls': redis_calls,
-                            'duration': redis_time,
-                        },
-                        'sql': {
-                            'calls': sql_calls,
-                            'duration': sql_time,
-                        },
-                        'cache': {
-                            'calls': cache_calls,
-                            'duration': cache_times,
-                        },
-                    }
+                    for item in data:
+                        extra_data[item['interface']]['calls'] += 1
+                        extra_data[item['interface']]['duration'] += item['duration']
 
                     test, created = Test.objects.get_or_create(
                         group=group,
                         label=test_data['id'],
                         defaults=dict(
+                            description=test_data['doc'].strip(),
                             duration=test_data['duration'],
                             data=extra_data,
                         )
