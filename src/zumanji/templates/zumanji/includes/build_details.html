@@ -1,0 +1,14 @@
+<dl class="dl-horizontal">
+  <dt>ID</dt>
+  <dd><a href="{% url zumanji:view_build build_id=build.id %}">B{{ build.id }}</a></dd>
+  <dt>Project</dt>
+  <dd>{{ build.project.label }}</dd>
+  <dt>Revision</dt>
+  <dd>{{ build.revision.label }}</dd>
+  <dt>Duration:</dt>
+  <dd>{{ build.total_duration|floatformat:3 }} s</dd>
+  <dt>Tests:</dt>
+  <dd>{{ build.num_tests }}</dd>
+  <dt>Datetime</dt>
+  <dd>{{ build.datetime }}</dd>
+</dl>

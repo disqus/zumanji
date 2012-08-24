@@ -1,0 +1,29 @@
+{% extends "zumanji/layout.html" %}
+
+{% block content %}
+  <h3>Latest Builds</h3>
+  <table class="table table-striped table-bordered">
+    <thead>
+      <tr>
+        <th style="width:60px; text-align:right;">ID</th>
+        <th>Datetime</th>
+        <th style="width:100px;">Project</th>
+        <th style="width:100px;">Revision</th>
+        <th style="width:100px; text-align:center;">Tests</th>
+        <th style="width:100px; text-align:center;">Duration</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for build in build_list %}
+        <tr>
+          <td style="text-align:right;"><a href="{% url zumanji:view_build build_id=build.id %}">B{{ build.id }}</a></td>
+          <td>{{ build.datetime }}</td>
+          <td>{{ build.project.label }}</td>
+          <td>{{ build.revision.label }}</td>
+          <td style="text-align:center;">{{ build.num_tests }}</td>
+          <td style="text-align:center;">{{ build.total_duration|floatformat:3 }} s</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

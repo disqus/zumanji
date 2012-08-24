@@ -1,0 +1,5 @@
+<tr>
+  <td style="text-align:right;"><a href="{% url zumanji:view_test test_id=test.id %}">T{{ test.id }}</a></td>
+  <td>{{ test.label }}</td>
+  <td style="text-align:center;">{{ test.duration|floatformat:3 }} s</td>
+</tr>

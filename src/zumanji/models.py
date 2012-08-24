@@ -1,0 +1,117 @@
+from django.db import models
+from jsonfield import JSONField
+
+
+class TestMixin(object):
+    def is_alert(self):
+        return self.duration >= 1
+
+    def is_warning(self):
+        return self.duration >= 0.5
+
+    def is_starred(self):
+        return self.duration < 0.1
+
+
+class Project(models.Model):
+    label = models.CharField(max_length=64)
+    data = JSONField(default={})
+
+    def __unicode__(self):
+        return self.label
+
+
+class Revision(models.Model):
+    project = models.ForeignKey(Project)
+    label = models.CharField(max_length=64)
+    data = JSONField()
+
+    class Meta:
+        unique_together = (('project', 'label'),)
+
+    def __unicode__(self):
+        return self.label
+
+
+class Build(models.Model):
+    project = models.ForeignKey(Project)
+    revision = models.ForeignKey(Revision)
+    datetime = models.DateTimeField()
+    num_tests = models.PositiveIntegerField(default=0)
+    total_duration = models.FloatField(default=0.0)
+    data = JSONField(default={})
+
+    class Meta:
+        unique_together = (('revision', 'datetime'),)
+
+    def __unicode__(self):
+        return unicode(self.datetime)
+
+    def save(self, *args, **kwargs):
+        self.project = self.revision.project
+        super(Build, self).save(*args, **kwargs)
+
+
+class TestGroup(models.Model):
+    project = models.ForeignKey(Project)
+    revision = models.ForeignKey(Revision)
+    build = models.ForeignKey(Build)
+    label = models.CharField(max_length=255)
+    num_tests = models.PositiveIntegerField(default=0)
+    mean_duration = models.FloatField(default=0.0)
+    upper_duration = models.FloatField(default=0.0)
+    lower_duration = models.FloatField(default=0.0)
+    upper90_duration = models.FloatField(default=0.0)
+
+    data = JSONField(default={})
+
+    class Meta:
+        unique_together = (('build', 'label'),)
+
+    def __unicode__(self):
+        return self.label
+
+    def save(self, *args, **kwargs):
+        self.revision = self.build.revision
+        self.project = self.revision.project
+        super(TestGroup, self).save(*args, **kwargs)
+
+
+class Test(models.Model, TestMixin):
+    project = models.ForeignKey(Project)
+    revision = models.ForeignKey(Revision)
+    build = models.ForeignKey(Build)
+    group = models.ForeignKey(TestGroup)
+    label = models.CharField(max_length=255)
+    duration = models.FloatField(default=0.0)
+    data = JSONField(default={})
+
+    class Meta:
+        unique_together = (('group', 'label'),)
+
+    def __unicode__(self):
+        return self.label
+
+    def save(self, *args, **kwargs):
+        self.build = self.group.build
+        self.revision = self.build.revision
+        self.project = self.revision.project
+        super(Test, self).save(*args, **kwargs)
+
+
+class TestData(models.Model):
+    project = models.ForeignKey(Project)
+    revision = models.ForeignKey(Revision)
+    build = models.ForeignKey(Build)
+    test = models.ForeignKey(Test)
+    key = models.CharField(max_length=64)
+    data = JSONField(default={})
+
+    class Meta:
+        unique_together = (('test', 'key'),)
+
+    def save(self, *args, **kwargs):
+        self.build = self.test.build
+        self.revision = self.build.revision
+        self.project = self.revision.project
+        super(TestData, self).save(*args, **kwargs)

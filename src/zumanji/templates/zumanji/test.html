@@ -1,0 +1,48 @@
+{% extends "zumanji/layout.html" %}
+
+{% block content %}
+  <h3>Build Details</h3>
+  {% include "zumanji/includes/build_details.html" %}
+
+  <h3>Group Details</h3>
+  <table class="table table-striped table-bordered">
+    <thead>
+      <tr>
+        <th style="width:60px; text-align:right;">ID</th>
+        <th>Group</th>
+        <th style="width:60px; text-align:center;">Tests</th>
+        <th style="width:100px; text-align:center;">Duration (90th)</th>
+        <th style="width:100px; text-align:center;">Historical</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% include "zumanji/includes/group_row.html" %}
+    </tbody>
+  </table>
+
+  <h3>Test Details</h3>
+  <table class="table table-striped table-bordered">
+    <thead>
+      <tr>
+        <th style="width:60px; text-align:right">ID</th>
+        <th>Test</th>
+        <th style="width:100px; text-align:center;">Duration</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% include "zumanji/includes/test_row.html" %}
+    </tbody>
+  </table>
+
+  <pre>{{ test.data|pprint }}</pre>
+
+  {% if trace %}
+    <h3>Trace</h3>
+    <ol>
+      {% for call in trace %}
+        <li>{{ call.time }} &mdash; {{ call.function }} ({{ call.duration|floatformat:3 }} s)</li>
+      {% endfor %}
+    </ol>
+  {% endif %}
+
+{% endblock %}
