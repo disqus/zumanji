@@ -28,7 +28,13 @@
       footer a {
         font-weight: bold;
       }
-
+      .brand small {
+        color: #999;
+        font-size: 0.7em;
+      }
+      .brand:hover {
+        color: #08C;
+      }
     </style>
     <link href="{{ STATIC_URL }}zumanji//css/bootstrap-responsive.css" rel="stylesheet">
 
@@ -48,7 +54,7 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </a>
-          <a class="brand" href="{% url zumanji:index %}">Zumanji</a>
+          <a class="brand" href="{% url zumanji:index %}">Zumanji <small>Performance Tests</small></a>
           <div class="nav-collapse collapse">
             <ul class="nav">
               <li><a href="{% url zumanji:index %}">Home</a></li>
@@ -64,7 +70,7 @@
     </div> <!-- /container -->
 
 
-    <footer>
+    <footer id="footer">
         <div class="container">
             {% block footer %}
                 <a href="https://github.com/disqus/zumanji">Zumanji</a> is Open Source Software | Inspired by the work of <a href="http://twitter.com/zmanji">@zmanji</a>, the greatest <a href="http://code.disqus.com">DISQUS</a> intern of all time.
