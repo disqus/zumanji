@@ -40,7 +40,7 @@
         {% for changed_test, data in changes %}
           <tr>
             <td>
-              <a href="{% url zumanji:view_test project_label=last_build.project.label build_id=last_build.build_id test_label=changed_test.label %}">{{ changed_test.label }}</a>{% if data.status == 'new' %} <span class="label label-info">New</span>{% endif %}
+              <a href="{% url zumanji:view_test project_label=last_build.project.label build_id=last_build.build_id test_label=changed_test.label %}">{{ changed_test.label }}</a>{% if test.num_tests %} <small>({{ test.num_tests }} tests)</small>{% endif %}{% if data.status == 'new' %} <span class="label label-info">New</span>{% endif %}
             </td>
             <td style="text-align:center;" class="change-{{ data.interfaces.sql.type }}">{{ data.interfaces.sql.change }}</td>
             <td style="text-align:center;" class="change-{{ data.interfaces.redis.type }}">{{ data.interfaces.redis.change }}</td>
