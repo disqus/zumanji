@@ -6,7 +6,7 @@
   <ul class="pager">
     {% if last_build %}
       <li class="previous">
-        <a href="{% url zumanji:view_test test_id=last_build.id %}">&larr; Previous Build (B{{ last_build.build_id }}, T{{ last_build.id }})</a>
+        <a href="{% url zumanji:view_test project_label=last_build.project.label build_id=last_build.build_id test_label=last_build.label %}">&larr; Previous Build (#{{ last_build.build_id }})</a>
       </li>
     {% else %}
       <li class="previous disabled">
@@ -16,7 +16,7 @@
 
     {% if next_build %}
       <li class="next">
-        <a href="{% url zumanji:view_test test_id=next_build.id %}">Next Build (B{{ next_build.build_id }}, T{{ next_build.id }}) &rarr;</a>
+        <a href="{% url zumanji:view_test project_label=next_build.project.label build_id=next_build.build_id test_label=next_build.label %}">Next Build (#{{ next_build.build_id }}) &rarr;</a>
       </li>
     {% else %}
       <li class="next disabled">
@@ -26,11 +26,10 @@
   </ul>
 
   {% if changes %}
-    <h3>Changes since <a href="{% url zumanji:view_test_group group_id=last_build.id %}">B{{ last_build.build_id }}, G{{ last_build.id }}</a></h3>
+    <h3>Changes since <a href="{% url zumanji:view_test project_label=last_build.project.label build_id=last_build.build_id test_label=last_build.label %}">#{{ last_build.build_id }}</a></h3>
     <table class="table table-bordered table-striped">
       <thead>
         <tr>
-          <th style="width:60px; text-align:right;">ID</th>
           <th>Test</th>
           <th style="width:60px; text-align:center;">SQL</th>
           <th style="width:60px; text-align:center;">Redis</th>
@@ -38,11 +37,10 @@
         </tr>
       </thead>
       <tbody>
-        {% for test, data in changes %}
+        {% for changed_test, data in changes %}
           <tr>
-            <td style="text-align:right;"><a href="{% url zumanji:view_test test_id=test.id %}">T{{ test.id }}</a></td>
             <td>
-              {{ test.label }}{% if data.status == 'new' %} <span class="label label-info">New</span>{% endif %}
+              <a href="{% url zumanji:view_test project_label=last_build.project.label build_id=last_build.build_id test_label=changed_test.label %}">{{ changed_test.label }}</a>{% if data.status == 'new' %} <span class="label label-info">New</span>{% endif %}
             </td>
             <td style="text-align:center;" class="change-{{ data.interfaces.sql.type }}">{{ data.interfaces.sql.change }}</td>
             <td style="text-align:center;" class="change-{{ data.interfaces.redis.type }}">{{ data.interfaces.redis.change }}</td>
@@ -53,12 +51,24 @@
     </table>
   {% endif %}
 
-  <h3>Historical</h3>
-  <div style="text-align: center;">
+  <h3>{{ test.label }} </h3>
+
+  <div style="text-align:center; margin-bottom:20px;">
     <span class="sparkline" data-values="{{ test.historical|format_historical }}" data-bar-width="42px" data-height="100px" data-bar-spacing="5px" style="line-height:100px;height:100px;"></span>
   </div>
 
-  <h3>Test Results</h3>
+  {% if breadcrumbs %}
+    <ul class="breadcrumb">
+      {% for link, label in breadcrumbs %}
+        {% if forloop.last %}
+          <li class="active">{{ label }}</li>
+        {% else %}
+         <li><a href="{{ link }}">{{ label }}</a> <span class="divider">/</span></li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+  {% endif %}
+
   <table class="table table-striped table-bordered">
     <thead>
       <tr>
@@ -95,7 +105,7 @@
       {% for call in data.trace %}
         <tr>
           <td style="text-align:right;">{{ call.interface }}</td>
-          <td style="padding-left: {{ call.depth }}px;">{{ call.command|truncatechars:100 }} {{ call.args|truncatechars:50 }}</td>
+          <td><div style="padding-left: {{ call.depth }}px;">{{ call.command|truncatechars:100 }} {{ call.args|truncatechars:50 }}</div></td>
           <td style="text-align:center;">{{ call.duration|floatformat:3 }} s</td>
         </tr>
       {% endfor %}

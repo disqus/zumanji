@@ -8,25 +8,25 @@ from zumanji.models import Project, Build, Test
 HISTORICAL_POINTS = 25
 
 
-def _get_historical_data(build, group_list):
+def _get_historical_data(build, test_list):
     # fetch 50 previous builds for comparing results
     previous_builds = list(Build.objects.filter(
         datetime__lt=build.datetime
     ).exclude(
         id=build.id,
     ).order_by('-datetime')
-     .values_list('id', flat=True)[:HISTORICAL_POINTS - 1])
+     .values_list('id', flat=True)[:HISTORICAL_POINTS - 1][::-1])
 
     previous_tests = list(Test.objects.filter(
             build__in=previous_builds,
-            label__in=[g.label for g in group_list]
+            label__in=[t.label for t in test_list]
         )
         .values_list('build', 'label', 'upper90_duration', 'data')
-        .order_by('build__datetime'))
+        .order_by('-build__datetime'))
 
     historical = defaultdict(lambda: defaultdict(str))
     for build_id, label, duration, data in itertools.chain(previous_tests, (
-        (g.build_id, g.label, g.upper90_duration, g.data) for g in group_list)):
+        (t.build_id, t.label, t.upper90_duration, t.data) for t in test_list)):
         if isinstance(data, basestring):
             data = simplejson.loads(data)
         history_data = [duration]
@@ -40,10 +40,10 @@ def _get_historical_data(build, group_list):
         historical[label][build_id] = history_data
 
     results = {}
-    for group in group_list:
-        results[group.id] = [
-            historical[group.label][b]
-            for b in ([(str, str, str, str)] * HISTORICAL_POINTS + previous_builds + [group.build_id])
+    for test in test_list:
+        results[test.id] = [
+            historical[test.label][b]
+            for b in ([(str, str, str, str)] * HISTORICAL_POINTS + previous_builds + [test.build_id])
         ][-HISTORICAL_POINTS:]
     return results
 
@@ -52,17 +52,14 @@ def _get_changes(last_build, objects):
     if not (last_build and objects):
         return {}
 
-    qs = last_build.tests.filter(test_id__in=[o.test_id for o in objects])
+    qs = last_build.test_set.filter(label__in=[o.label for o in objects])
 
-    last_build_objects = dict(
-        (getattr(o, 'test_id', o.label), o)
-        for o in qs
-    )
+    last_build_objects = dict((o.label, o) for o in qs)
     changes = dict()
 
     # {group: [{notes: notes, type: type}]}
     for obj in objects:
-        last_obj = last_build_objects.get(getattr(obj, 'test_id', obj.label))
+        last_obj = last_build_objects.get(obj.label)
         obj_changes = {
             'interfaces': {},
             'status': 'new' if last_obj is None else None,
@@ -176,8 +173,6 @@ def view_test(request, project_label, build_id, test_label):
     )
 
     breadcrumbs = [
-        (reverse('zumanji:view_project', kwargs={'project_label': project.label}), project.label),
-        (reverse('zumanji:view_build', kwargs={'project_label': project.label, 'build_id': build.id}), 'Build #%s' % build.id),
     ]
     key = []
     for part in test.label.split('.'):
