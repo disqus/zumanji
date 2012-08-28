@@ -6,9 +6,9 @@
     <thead>
       <tr>
         <th style="width:60px; text-align:right;">ID</th>
-        <th>Datetime</th>
-        <th style="width:100px;">Project</th>
-        <th style="width:100px;">Revision</th>
+        <th style="width:150px;">Project</th>
+        <th>Revision</th>
+        <th style="width:180px;">Datetime</th>
         <th style="width:100px; text-align:center;">Tests</th>
         <th style="width:100px; text-align:center;">Duration</th>
       </tr>
@@ -16,10 +16,10 @@
     <tbody>
       {% for build in build_list %}
         <tr>
-          <td style="text-align:right;"><a href="{% url zumanji:view_build build_id=build.id %}">B{{ build.id }}</a></td>
-          <td>{{ build.datetime }}</td>
+          <td style="text-align:right;"><a href="{% url zumanji:view_build project_label=build.project.label, build_id=build.id %}">B{{ build.id }}</a></td>
           <td>{{ build.project.label }}</td>
           <td>{{ build.revision.label }}</td>
+          <td>{{ build.datetime }}</td>
           <td style="text-align:center;">{{ build.num_tests }}</td>
           <td style="text-align:center;">{{ build.total_duration|floatformat:3 }} s</td>
         </tr>

@@ -1,8 +1,9 @@
 import itertools
 from collections import defaultdict
+from django.core.urlresolvers import reverse
 from django.shortcuts import render
 from django.utils import simplejson
-from zumanji.models import Build, TestGroup, Test
+from zumanji.models import Project, Build, Test
 
 HISTORICAL_POINTS = 25
 
@@ -16,7 +17,7 @@ def _get_historical_data(build, group_list):
     ).order_by('-datetime')
      .values_list('id', flat=True)[:HISTORICAL_POINTS - 1])
 
-    previous_tests = list(TestGroup.objects.filter(
+    previous_tests = list(Test.objects.filter(
             build__in=previous_builds,
             label__in=[g.label for g in group_list]
         )
@@ -51,15 +52,7 @@ def _get_changes(last_build, objects):
     if not (last_build and objects):
         return {}
 
-    model = type(objects[0])
-    if model == Test:
-        qs = last_build.test_set.filter(test_id__in=[o.test_id for o in objects])
-        calls_key = 'calls'
-    elif model == TestGroup:
-        qs = last_build.testgroup_set.filter(label__in=[o.label for o in objects])
-        calls_key = 'mean_calls'
-    else:
-        raise NotImplementedError
+    qs = last_build.tests.filter(test_id__in=[o.test_id for o in objects])
 
     last_build_objects = dict(
         (getattr(o, 'test_id', o.label), o)
@@ -79,12 +72,12 @@ def _get_changes(last_build, objects):
             last_obj_data = last_obj.data
             for interface in ('redis', 'sql', 'cache'):
                 if interface in data:
-                    current = data[interface].get(calls_key, 0)
+                    current = data[interface].get('mean_calls', 0)
                 else:
                     current = 0
 
                 if interface in last_obj_data:
-                    previous = last_obj_data[interface].get(calls_key, 0)
+                    previous = last_obj_data[interface].get('mean_calls', 0)
                 else:
                     previous = 0
 
@@ -119,71 +112,87 @@ def index(request):
     })
 
 
-def view_build(request, build_id):
-    build = Build.objects.get(id=build_id)
+def view_project(request, project_label):
+    project = Project.objects.get(label=project_label)
+
+    build_list = list(Build.objects
+        .filter(project=project)
+        .order_by('-datetime')
+        .select_related('revision', 'project'))
+
+    return render(request, 'zumanji/index.html', {
+        'project': project,
+        'build_list': build_list,
+    })
+
+
+def view_build(request, project_label, build_id):
+    build = Build.objects.get(project__label=project_label, id=build_id)
     last_build = build.get_last_build()
     next_build = build.get_next_build()
 
-    test_group_list = list(build.testgroup_set
+    test_list = list(build.test_set
+        .filter(parent__isnull=True)
         .order_by('-upper90_duration'))
 
-    historical = _get_historical_data(build, test_group_list)
-    for group in test_group_list:
-        group.historical = historical.get(group.id)
+    historical = _get_historical_data(build, test_list)
+    for test in test_list:
+        test.historical = historical.get(test.id)
 
-    changes = _get_changes(last_build, test_group_list)
+    changes = _get_changes(last_build, test_list)
 
     return render(request, 'zumanji/build.html', {
         'build': build,
         'last_build': last_build,
         'next_build': next_build,
-        'test_group_list': test_group_list,
-        'changes': changes,
-    })
-
-
-def view_test_group(request, group_id):
-    group = TestGroup.objects.get(id=group_id)
-    build = group.build
-    test_list = list(group.test_set
-        .order_by('-duration'))
-
-    # this is actually a <TestGroup>
-    last_build = group.get_last_build()
-
-    historical = _get_historical_data(build, [group])
-    group.historical = historical.get(group.id)
-
-    changes = _get_changes(last_build.build, test_list)
-
-    return render(request, 'zumanji/testgroup.html', {
-        'build': build,
-        'last_build': last_build,
-        'next_build': group.get_next_build(),
-        'group': group,
         'test_list': test_list,
         'changes': changes,
     })
 
 
-def view_test(request, test_id):
-    test = Test.objects.get(id=test_id)
-    group = test.group
-    build = group.build
+def view_test(request, project_label, build_id, test_label):
+    test = Test.objects.get(project__label=project_label, build=build_id, label=test_label)
+    project = test.project
+    build = test.build
 
-    historical = _get_historical_data(build, [group])
-    group.historical = historical.get(group.id)
+    test_list = list(Test.objects.filter(parent=test)
+        .order_by('-upper90_duration'))
+
+    # this is actually a <TestGroup>
+    last_build = test.get_last_build()
+    next_build = test.get_next_build()
+
+    historical = _get_historical_data(build, [test])
+    test.historical = historical.get(test.id)
+
+    if last_build:
+        changes = _get_changes(last_build.build, test_list)
+    else:
+        changes = []
 
     data = dict(
         (k, simplejson.loads(v))
         for k, v in test.testdata_set.values_list('key', 'data')
     )
 
+    breadcrumbs = [
+        (reverse('zumanji:view_project', kwargs={'project_label': project.label}), project.label),
+        (reverse('zumanji:view_build', kwargs={'project_label': project.label, 'build_id': build.id}), 'Build #%s' % build.id),
+    ]
+    key = []
+    for part in test.label.split('.'):
+        key.append(part)
+        test_label = '.'.join(key)
+        breadcrumbs.append((reverse('zumanji:view_test', kwargs=dict(project_label=project.label, build_id=build.id, test_label=test_label)), part))
+
     return render(request, 'zumanji/test.html', {
-        'test': test,
+        'breadcrumbs': breadcrumbs,
         'build': build,
-        'last_build': test.get_last_build(),
-        'next_build': test.get_next_build(),
-        'group': group,
-        'trace': data['trace'],
+        'last_build': last_build,
+        'next_build': next_build,
+        'test': test,
+        'test_list': test_list,
+        'changes': changes,
+        'data': data,
     })
+

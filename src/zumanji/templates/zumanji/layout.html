@@ -86,6 +86,19 @@
     </div>
 
     <div class="container">
+      {% block breadcrumb %}
+        {% if breadcrumbs %}
+          <ul class="breadcrumb">
+            {% for link, label in breadcrumbs %}
+              {% if forloop.last %}
+                <li class="active">{{ label }}</li>
+              {% else %}
+               <li><a href="{{ link }}">{{ label }}</a> <span class="divider">/</span></li>
+              {% endif %}
+            {% endfor %}
+          </ul>
+        {% endif %}
+      {% endblock %}
       {% block content %}
       {% endblock %}
     </div> <!-- /container -->

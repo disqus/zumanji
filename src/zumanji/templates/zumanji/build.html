@@ -4,7 +4,7 @@
   <ul class="pager">
     {% if last_build %}
       <li class="previous">
-        <a href="{% url zumanji:view_build build_id=last_build.id %}">&larr; Previous Build (B{{ last_build.id }})</a>
+        <a href="{% url zumanji:view_build project_label=project.label build_id=last_build.id %}">&larr; Previous Build (B{{ last_build.id }})</a>
       </li>
     {% else %}
       <li class="previous disabled">
@@ -14,7 +14,7 @@
 
     {% if next_build %}
       <li class="next">
-        <a href="{% url zumanji:view_build build_id=next_build.id %}">Next Build (B{{ next_build.id }}) &rarr;</a>
+        <a href="{% url zumanji:view_build project_label=project.label build_id=next_build.id %}">Next Build (B{{ next_build.id }}) &rarr;</a>
       </li>
     {% else %}
       <li class="next disabled">
@@ -27,11 +27,10 @@
   {% include "zumanji/includes/build_details.html" %}
 
   {% if changes %}
-    <h3>Changes since <a href="{% url zumanji:view_build build_id=last_build.id %}">B{{ last_build.id }}</a></h3>
+    <h3>Changes since <a href="{% url zumanji:view_build project_label=project.label build_id=last_build.id %}">B{{ last_build.id }}</a></h3>
     <table class="table table-bordered table-striped">
       <thead>
         <tr>
-          <th style="width:60px; text-align:right;">ID</th>
           <th>Group</th>
           <th style="width:60px; text-align:center;">SQL</th>
           <th style="width:60px; text-align:center;">Redis</th>
@@ -39,11 +38,10 @@
         </tr>
       </thead>
       <tbody>
-        {% for group, data in changes %}
+        {% for test, data in changes %}
           <tr>
-            <td style="text-align:right;"><a href="{% url zumanji:view_test_group group_id=group.id %}">G{{ group.id }}</a></td>
             <td>
-              {{ group.label }}{% if data.status == 'new' %} <span class="label label-info">New</span>{% endif %}
+              <a href="{% url zumanji:view_test project_label=project.label build_id=build.id test_label=test.label %}">{{ test.label }}</a>{% if data.status == 'new' %} <span class="label label-info">New</span>{% endif %}
             </td>
             <td style="text-align:center;" class="change-{{ data.interfaces.sql.type }}">{{ data.interfaces.sql.change }}</td>
             <td style="text-align:center;" class="change-{{ data.interfaces.redis.type }}">{{ data.interfaces.redis.change }}</td>
@@ -54,20 +52,20 @@
     </table>
   {% endif %}
 
-  <h3>Group Results</h3>
+  <h3>Test Results</h3>
   <table class="table table-striped table-bordered">
     <thead>
       <tr>
-        <th style="width:60px; text-align:right;">ID</th>
-        <th>Group</th>
-        <th style="width:50px; text-align:center;">Tests</th>
-        <th style="width:60px; text-align:center;" title="90th Percentile">Duration</th>
+        <th>Test</th>
+        <th style="width:60px; text-align:center;">Cache</th>
+        <th style="width:60px; text-align:center;">Redis</th>
+        <th style="width:60px; text-align:center;">SQL</th>
         <th style="width:100px; text-align:center;">Historical</th>
       </tr>
     </thead>
     <tbody>
-      {% for group in test_group_list %}
-        {% include "zumanji/includes/group_row.html" %}
+      {% for test in test_list %}
+        {% include "zumanji/includes/test_row.html" %}
       {% endfor %}
     </tbody>
   </table>

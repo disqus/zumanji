@@ -5,17 +5,19 @@ from django.db import transaction
 from django.utils import simplejson
 from django.core.management.base import BaseCommand, CommandError
 from optparse import make_option
-from zumanji.models import Project, Revision, Build, Test, TestGroup, TestData
+from zumanji.models import Project, Revision, Build, Test, TestData
 
 
 def regroup_tests(tests):
     grouped = defaultdict(list)
 
     for test in tests:
-        grouper = test.get('group') or test.get('label') or test['id']
-        grouped[grouper].append(test)
+        key = []
+        for part in test['id'].split('.')[:-1]:
+            key.append(part)
+            grouped['.'.join(key)].append(test)
 
-    return grouped
+    return sorted(grouped.items(), key=lambda x: x[0])
 
 
 def format_data(interface, data):
@@ -54,6 +56,51 @@ def format_data(interface, data):
 
 def percentile(values, percentile=90):
     return values[int(len(values) * (percentile / 100.0))]
+
+
+def create_test_leaf(data, parent):
+    interface_data = []
+    for interface, values in data.get('interfaces', {}).iteritems():
+        for item in values:
+            interface_data.append((interface, item))
+
+    interface_data = [format_data(*d) for d in sorted(interface_data, key=lambda x: x[0])]
+
+    description = (data.get('doc') or '').strip()
+
+    extra_data = defaultdict(lambda: {
+        'mean_calls': 0,
+        'mean_duration': 0.0,
+    })
+    for item in interface_data:
+        extra_data[item['interface']]['mean_calls'] += 1
+        extra_data[item['interface']]['mean_duration'] += item['duration']
+
+    test, created = Test.objects.get_or_create(
+        parent=parent,
+        label=data['id'],
+        defaults=dict(
+            description=description,
+            mean_duration=data['duration'],
+            data=extra_data,
+        )
+    )
+    if not created:
+        test.data = extra_data
+        test.save()
+
+    td, created = TestData.objects.get_or_create(
+        test=test,
+        key='trace',
+        defaults=dict(
+            data=data,
+        )
+    )
+    if not created and td.data != interface_data:
+        td.data = interface_data
+        td.save()
+
+    return test
 
 
 class Command(BaseCommand):
@@ -98,63 +145,42 @@ class Command(BaseCommand):
 
             num_tests = 0
             total_duration = 0.0
-            for grouper, tests in regroup_tests(data['tests']).iteritems():
-                group = TestGroup.objects.get_or_create(
+            tests_by_id = {}
+            grouped_tests = regroup_tests(data['tests'])
+
+            # Create all parents
+            for label, _ in grouped_tests:
+                if '.' in label:
+                    parent = tests_by_id[label.rsplit('.', 1)[0]]
+                else:
+                    parent = None
+                tests_by_id[label] = Test.objects.get_or_create(
+                    project=project,
+                    revision=revision,
                     build=build,
-                    label=grouper,
+                    label=label,
+                    parent=parent,
                 )[0]
+
+            for label, tests in grouped_tests:
+                for test_data in tests:
+                    if test_data['id'] not in tests_by_id:
+                        if '.' in test_data['id']:
+                            parent = tests_by_id[test_data['id'].rsplit('.', 1)[0]]
+                        test = create_test_leaf(test_data, parent)
+                        num_tests += 1
+                        total_duration += test.mean_duration
+                        tests_by_id[test.label] = test
+
+                # Update aggregated data
                 group_durations = []
                 # {interface: {test_id: [duration]}}
                 interface_durations = defaultdict(lambda: defaultdict(list))
 
-                for test_data in tests:
-                    group_durations.append(test_data['duration'])
-                    data = []
-                    extra_data = defaultdict(lambda: {
-                        'calls': 0,
-                        'duration': 0.0,
-                    })
-
-                    for interface, values in test_data.get('interfaces', {}).iteritems():
-                        for item in values:
-                            ts = datetime.datetime.strptime(item['time'], '%Y-%m-%dT%H:%M:%S.%f')
-
-                            data.append((ts, interface, item))
-                            interface_durations[interface][test_data['id']].append(item['duration'])
-
-                    data = [format_data(*d[1:]) for d in sorted(data, key=lambda x: x[0])]
-
-                    for item in data:
-                        extra_data[item['interface']]['calls'] += 1
-                        extra_data[item['interface']]['duration'] += item['duration']
-
-                    test_label = test_data.get('label') or test_data['id']
-
-                    test, created = Test.objects.get_or_create(
-                        group=group,
-                        test_id=test_data['id'],
-                        defaults=dict(
-                            description=(test_data.get('doc') or '').strip(),
-                            duration=test_data['duration'],
-                            data=extra_data,
-                            label=test_label,
-                        )
-                    )
-                    if not created:
-                        test.data = extra_data
-                        test.label = test_label
-                        test.save()
-
-                    td, created = TestData.objects.get_or_create(
-                        test=test,
-                        key='trace',
-                        defaults=dict(
-                            data=data,
-                        )
-                    )
-                    if not created and td.data != data:
-                        td.data = data
-                        td.save()
+                for test in (tests_by_id[t['id']] for t in tests):
+                    group_durations.append(test.mean_duration)
+                    for interface, values in test.data.iteritems():
+                        interface_durations[interface][test.label].append(values['mean_duration'])
 
                 group_num_tests = len(group_durations)
                 group_total_duration = sum(group_durations)
@@ -171,7 +197,9 @@ class Command(BaseCommand):
                         'upper90_duration': percentile(durations, 90),
                     }
 
-                TestGroup.objects.filter(id=group.id).update(
+                test = tests_by_id[label]
+                Test.objects.filter(id=test.id).update(
+                    label=label,
                     num_tests=group_num_tests,
                     mean_duration=group_total_duration,
                     upper_duration=group_durations[-1],
@@ -179,9 +207,6 @@ class Command(BaseCommand):
                     upper90_duration=percentile(group_durations, 90),
                     data=td_data,
                 )
-
-                num_tests += group_num_tests
-                total_duration += group_total_duration
 
             Build.objects.filter(id=build.id).update(
                 num_tests=num_tests,

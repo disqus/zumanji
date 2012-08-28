@@ -83,8 +83,10 @@
       </tr>
     </thead>
     <tbody>
-      {% for test in test_list %}
-        {% include "zumanji/includes/test_row.html" %}
+      {% for child in test_list %}
+        {% with child as test %}
+          {% include "zumanji/includes/test_row.html" %}
+        {% endwith %}
       {% endfor %}
     </tbody>
   </table>

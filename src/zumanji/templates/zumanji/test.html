@@ -1,5 +1,7 @@
 {% extends "zumanji/layout.html" %}
 
+{% load zumanji_helpers %}
+
 {% block content %}
   <ul class="pager">
     {% if last_build %}
@@ -23,39 +25,57 @@
     {% endif %}
   </ul>
 
-  <h3>Build Details</h3>
-  {% include "zumanji/includes/build_details.html" %}
+  {% if changes %}
+    <h3>Changes since <a href="{% url zumanji:view_test_group group_id=last_build.id %}">B{{ last_build.build_id }}, G{{ last_build.id }}</a></h3>
+    <table class="table table-bordered table-striped">
+      <thead>
+        <tr>
+          <th style="width:60px; text-align:right;">ID</th>
+          <th>Test</th>
+          <th style="width:60px; text-align:center;">SQL</th>
+          <th style="width:60px; text-align:center;">Redis</th>
+          <th style="width:60px; text-align:center;">Cache</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for test, data in changes %}
+          <tr>
+            <td style="text-align:right;"><a href="{% url zumanji:view_test test_id=test.id %}">T{{ test.id }}</a></td>
+            <td>
+              {{ test.label }}{% if data.status == 'new' %} <span class="label label-info">New</span>{% endif %}
+            </td>
+            <td style="text-align:center;" class="change-{{ data.interfaces.sql.type }}">{{ data.interfaces.sql.change }}</td>
+            <td style="text-align:center;" class="change-{{ data.interfaces.redis.type }}">{{ data.interfaces.redis.change }}</td>
+            <td style="text-align:center;" class="change-{{ data.interfaces.cache.type }}">{{ data.interfaces.cache.change }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
 
-  <h3>Group Details</h3>
+  <h3>Historical</h3>
+  <div style="text-align: center;">
+    <span class="sparkline" data-values="{{ test.historical|format_historical }}" data-bar-width="42px" data-height="100px" data-bar-spacing="5px" style="line-height:100px;height:100px;"></span>
+  </div>
+
+  <h3>Test Results</h3>
   <table class="table table-striped table-bordered">
     <thead>
       <tr>
-        <th style="width:60px; text-align:right;">ID</th>
-        <th>Group</th>
-        <th style="width:60px; text-align:center;">Tests</th>
-        <th style="width:100px; text-align:center;">Duration (90th)</th>
-        <th style="width:100px; text-align:center;">Historical</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% include "zumanji/includes/group_row.html" %}
-    </tbody>
-  </table>
-
-  <h3>Test Details</h3>
-  <table class="table table-striped table-bordered">
-    <thead>
-      <tr>
-        <th style="width:60px; text-align:right">ID</th>
         <th>Test</th>
         <th style="width:60px; text-align:center;">Cache</th>
         <th style="width:60px; text-align:center;">Redis</th>
         <th style="width:60px; text-align:center;">SQL</th>
         <th style="width:60px; text-align:center;">Duration</th>
+        {# <th style="width:100px; text-align:center;">Historical</th> #}
       </tr>
     </thead>
     <tbody>
-      {% include "zumanji/includes/test_row.html" %}
+      {% for test in test_list %}
+        {% include "zumanji/includes/test_row.html" %}
+      {% empty %}
+        {% include "zumanji/includes/test_row.html" %}
+      {% endfor %}
     </tbody>
   </table>
 
@@ -63,17 +83,16 @@
     <blockquote>{{ test.description|linebreaks }}</blockquote>
   {% endif %}
 
-  {% if trace %}
-    <h3>Trace <small>{{ trace|length }} calls</small></h3>
+  {% if data.trace %}
+    <h3>Trace <small>{{ data.trace|length }} calls</small></h3>
     <table class="table table-bordered table-striped">
       <thead>
         <th style="width:100px; text-align:right;">Interface</th>
         <th>Command</th>
         <th style="width:60px; text-align:center;">Duration</th>
       </thead>
-      </thead>
       <tbody>
-      {% for call in trace %}
+      {% for call in data.trace %}
         <tr>
           <td style="text-align:right;">{{ call.interface }}</td>
           <td style="padding-left: {{ call.depth }}px;">{{ call.command|truncatechars:100 }} {{ call.args|truncatechars:50 }}</td>

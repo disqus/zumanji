@@ -72,17 +72,18 @@ class Build(models.Model):
             return None
 
 
-class TestGroup(models.Model):
+class Test(models.Model, TestMixin):
     project = models.ForeignKey(Project)
     revision = models.ForeignKey(Revision)
     build = models.ForeignKey(Build)
+    parent = models.ForeignKey('self', null=True)
     label = models.CharField(max_length=255)
+    description = models.TextField(null=True)
     num_tests = models.PositiveIntegerField(default=0)
     mean_duration = models.FloatField(default=0.0)
     upper_duration = models.FloatField(default=0.0)
     lower_duration = models.FloatField(default=0.0)
     upper90_duration = models.FloatField(default=0.0)
-
     data = JSONField(default={})
 
     class Meta:
@@ -92,61 +93,17 @@ class TestGroup(models.Model):
         return self.label
 
     def save(self, *args, **kwargs):
-        self.revision = self.build.revision
-        self.project = self.revision.project
-        super(TestGroup, self).save(*args, **kwargs)
-
-    def get_last_build(self):
-        try:
-            return type(self).objects.filter(
-                build__datetime__lt=self.build.datetime,
-                label=self.label,
-            ).exclude(
-                build=self.build,
-            ).order_by('-build__datetime')[0]
-        except IndexError:
-            return None
-
-    def get_next_build(self):
-        try:
-            return type(self).objects.filter(
-                build__datetime__gt=self.build.datetime,
-                label=self.label,
-            ).exclude(
-                build=self.build,
-            ).order_by('build__datetime')[0]
-        except IndexError:
-            return None
-
-
-class Test(models.Model, TestMixin):
-    project = models.ForeignKey(Project)
-    revision = models.ForeignKey(Revision)
-    build = models.ForeignKey(Build)
-    group = models.ForeignKey(TestGroup)
-    test_id = models.CharField(max_length=255)
-    label = models.CharField(max_length=255)
-    duration = models.FloatField(default=0.0)
-    description = models.TextField(null=True)
-    data = JSONField(default={})
-
-    class Meta:
-        unique_together = (('build', 'test_id'),)
-
-    def __unicode__(self):
-        return self.label
-
-    def save(self, *args, **kwargs):
-        self.build = self.group.build
-        self.revision = self.build.revision
-        self.project = self.revision.project
+        if self.parent:
+            self.build = self.parent.build
+            self.revision = self.build.revision
+            self.project = self.revision.project
         super(Test, self).save(*args, **kwargs)
 
     def get_last_build(self):
         try:
             return type(self).objects.filter(
                 build__datetime__lt=self.build.datetime,
-                test_id=self.test_id,
+                label=self.label,
             ).exclude(
                 build=self.build,
             ).order_by('-build__datetime')[0]
@@ -157,7 +114,7 @@ class Test(models.Model, TestMixin):
         try:
             return type(self).objects.filter(
                 build__datetime__gt=self.build.datetime,
-                test_id=self.test_id,
+                label=self.label,
             ).exclude(
                 build=self.build,
             ).order_by('build__datetime')[0]
