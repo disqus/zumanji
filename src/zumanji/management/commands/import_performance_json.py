@@ -91,7 +91,6 @@ class Command(BaseCommand):
                 label=revision_label,
             )[0]
 
-
             build, created = Build.objects.get_or_create(
                 revision=revision,
                 datetime=timestamp,

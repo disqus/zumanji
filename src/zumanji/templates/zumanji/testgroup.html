@@ -37,6 +37,34 @@
     </div>
   </div>
 
+  {% if changes %}
+    <h3>Changes since <a href="{% url zumanji:view_test_group group_id=last_build.id %}">B{{ last_build.build_id }}, G{{ last_build.id }}</a></h3>
+    <table class="table table-bordered table-striped">
+      <thead>
+        <tr>
+          <th style="width:60px; text-align:right;">ID</th>
+          <th>Test</th>
+          <th style="width:60px; text-align:center;">SQL</th>
+          <th style="width:60px; text-align:center;">Redis</th>
+          <th style="width:60px; text-align:center;">Cache</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for test, data in changes %}
+          <tr>
+            <td style="text-align:right;"><a href="{% url zumanji:view_test test_id=test.id %}">T{{ test.id }}</a></td>
+            <td>
+              {{ test.label }}{% if data.status == 'new' %} <span class="label label-info">New</span>{% endif %}
+            </td>
+            <td style="text-align:center;" class="change-{{ data.interfaces.sql.type }}">{{ data.interfaces.sql.change }}</td>
+            <td style="text-align:center;" class="change-{{ data.interfaces.redis.type }}">{{ data.interfaces.redis.change }}</td>
+            <td style="text-align:center;" class="change-{{ data.interfaces.cache.type }}">{{ data.interfaces.cache.change }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+
   <h3>Historical</h3>
   <div style="text-align: center;">
     <span class="sparkline" data-values="{{ group.historical|format_historical }}" data-bar-width="42px" data-height="100px" data-bar-spacing="5px" style="line-height:100px;height:100px;"></span>

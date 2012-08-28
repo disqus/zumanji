@@ -47,6 +47,66 @@ def _get_historical_data(build, group_list):
     return results
 
 
+def _get_changes(last_build, objects):
+    if not (last_build and objects):
+        return {}
+
+    model = type(objects[0])
+    if model == Test:
+        qs = last_build.test_set.filter(test_id__in=[o.test_id for o in objects])
+        calls_key = 'calls'
+    elif model == TestGroup:
+        qs = last_build.testgroup_set.filter(label__in=[o.label for o in objects])
+        calls_key = 'mean_calls'
+    else:
+        raise NotImplementedError
+
+    last_build_objects = dict(
+        (getattr(o, 'test_id', o.label), o)
+        for o in qs
+    )
+    changes = dict()
+
+    # {group: [{notes: notes, type: type}]}
+    for obj in objects:
+        last_obj = last_build_objects.get(getattr(obj, 'test_id', obj.label))
+        obj_changes = {
+            'interfaces': {},
+            'status': 'new' if last_obj is None else None,
+        }
+        if last_obj:
+            data = obj.data
+            last_obj_data = last_obj.data
+            for interface in ('redis', 'sql', 'cache'):
+                if interface in data:
+                    current = data[interface].get(calls_key, 0)
+                else:
+                    current = 0
+
+                if interface in last_obj_data:
+                    previous = last_obj_data[interface].get(calls_key, 0)
+                else:
+                    previous = 0
+
+                change = current - previous
+                if change == 0:
+                    continue
+
+                obj_changes['interfaces'][interface] = {
+                    'current': current,
+                    'previous': previous,
+                    'change': '+%s' % change if change > 0 else str(change),
+                    'type': 'increase' if change > 0 else 'decrease',
+                }
+
+        if obj_changes['status'] != 'new' and not obj_changes['interfaces']:
+            continue
+
+        changes[obj] = obj_changes
+
+    return sorted(changes.iteritems(), key=lambda x: getattr(x[0], 'test_id', x[0].label))
+
+
 def index(request):
     build_list = list(Build.objects
         .order_by('-datetime')
@@ -69,55 +129,14 @@ def view_build(request, build_id):
     for group in test_group_list:
         group.historical = historical.get(group.id)
 
-    if not last_build:
-        last_build_groups = dict()
-        changes = dict()
-    else:
-        last_build_groups = dict((g.label, g) for g in last_build.testgroup_set.all())
-        changes = dict()
-        # {group: [{notes: notes, type: type}]}
-        for group in test_group_list:
-            last_group = last_build_groups.get(group.label)
-            group_changes = {
-                'interfaces': {},
-                'status': 'new' if last_group is None else None,
-            }
-            if last_group:
-                data = group.data
-                last_group_data = last_group.data
-                for interface in ('redis', 'sql', 'cache'):
-                    if interface in data:
-                        current = data[interface].get('mean_calls', 0)
-                    else:
-                        current = 0
-
-                    if interface in last_group_data:
-                        previous = last_group_data[interface].get('mean_calls', 0)
-                    else:
-                        previous = 0
-
-                    change = current - previous
-                    if change == 0:
-                        continue
-
-                    group_changes['interfaces'][interface] = {
-                        'current': current,
-                        'previous': previous,
-                        'change': '+%s' % change if change > 0 else str(change),
-                        'type': 'increase' if change > 0 else 'decrease',
-                    }
-
-            if group_changes['status'] != 'new' and not group_changes['interfaces']:
-                continue
-
-            changes[group] = group_changes
+    changes = _get_changes(last_build, test_group_list)
 
     return render(request, 'zumanji/build.html', {
         'build': build,
         'last_build': last_build,
         'next_build': next_build,
         'test_group_list': test_group_list,
-        'changes': sorted(changes.iteritems(), key=lambda x: x[0].label),
+        'changes': changes,
     })
 
 
@@ -127,15 +146,21 @@ def view_test_group(request, group_id):
     test_list = list(group.test_set
         .order_by('-duration'))
 
+    # this is actually a <TestGroup>
+    last_build = group.get_last_build()
+
     historical = _get_historical_data(build, [group])
     group.historical = historical.get(group.id)
 
+    changes = _get_changes(last_build.build, test_list)
+
     return render(request, 'zumanji/testgroup.html', {
         'build': build,
-        'last_build': group.get_last_build(),
+        'last_build': last_build,
         'next_build': group.get_next_build(),
         'group': group,
         'test_list': test_list,
+        'changes': changes,
     })
 
 
