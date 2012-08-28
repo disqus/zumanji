@@ -17,6 +17,12 @@ Import JSON data from your test runner::
 Screenshots
 -----------
 
+Aggregate Report
+~~~~~~~~~~~~~~~~
+
 .. image:: https://github.com/disqus/zumanji/raw/master/screenshots/branch.png
+
+Individual Test
+~~~~~~~~~~~~~~~
 
 .. image:: https://github.com/disqus/zumanji/raw/master/screenshots/leaf.png
