@@ -13,3 +13,10 @@ Usage
 Import JSON data from your test runner::
 
     $ python manage.py import_performance_json <json file> --project=disqus-web
+
+Screenshots
+-----------
+
+.. image:: screenshots/branch.png
+
+.. image:: screenshots/leaf.png
