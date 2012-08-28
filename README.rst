@@ -17,6 +17,6 @@ Import JSON data from your test runner::
 Screenshots
 -----------
 
-.. image:: screenshots/branch.png
+.. image:: https://github.com/disqus/zumanji/raw/master/screenshots/branch.png
 
-.. image:: screenshots/leaf.png
+.. image:: https://github.com/disqus/zumanji/raw/master/screenshots/leaf.png
