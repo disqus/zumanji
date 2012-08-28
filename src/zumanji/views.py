@@ -21,12 +21,12 @@ def _get_historical_data(build, test_list):
             build__in=previous_builds,
             label__in=[t.label for t in test_list]
         )
-        .values_list('build', 'label', 'upper90_duration', 'data')
+        .values_list('build', 'label', 'mean_duration', 'data')
         .order_by('-build__datetime'))
 
     historical = defaultdict(lambda: defaultdict(str))
     for build_id, label, duration, data in itertools.chain(previous_tests, (
-        (t.build_id, t.label, t.upper90_duration, t.data) for t in test_list)):
+        (t.build_id, t.label, t.mean_duration, t.data) for t in test_list)):
         if isinstance(data, basestring):
             data = simplejson.loads(data)
         history_data = [duration]
@@ -34,7 +34,7 @@ def _get_historical_data(build, test_list):
             if interface not in data:
                 history_data.append(0)
             else:
-                interface_duration = data[interface].get('upper90_duration', 0)
+                interface_duration = data[interface].get('mean_duration', 0)
                 history_data[0] -= interface_duration
                 history_data.append(interface_duration)
         historical[label][build_id] = history_data
@@ -180,6 +180,8 @@ def view_test(request, project_label, build_id, test_label):
         test_label = '.'.join(key)
         breadcrumbs.append((reverse('zumanji:view_test', kwargs=dict(project_label=project.label, build_id=build.id, test_label=test_label)), part))
 
+    print data['trace']
+
     return render(request, 'zumanji/test.html', {
         'breadcrumbs': breadcrumbs,
         'build': build,
@@ -190,4 +192,3 @@ def view_test(request, project_label, build_id, test_label):
         'changes': changes,
         'data': data,
     })
-

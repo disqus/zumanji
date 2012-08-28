@@ -82,6 +82,9 @@ def create_test_leaf(data, parent):
         defaults=dict(
             description=description,
             mean_duration=data['duration'],
+            upper90_duration=data['duration'],
+            upper_duration=data['duration'],
+            lower_duration=data['duration'],
             data=extra_data,
         )
     )
@@ -93,7 +96,7 @@ def create_test_leaf(data, parent):
         test=test,
         key='trace',
         defaults=dict(
-            data=data,
+            data=interface_data,
         )
     )
     if not created and td.data != interface_data:
