@@ -104,7 +104,9 @@ def _get_changes(last_build, objects):
 
         changes[obj] = obj_changes
 
-    return sorted(changes.iteritems(), key=lambda x: getattr(x[0], 'test_id', x[0].label))
+    return sorted(changes.iteritems(),
+        key=lambda x: sum(int(i['change']) for i in x[1]['interfaces'].values()),
+        reverse=True)
 
 
 def index(request):
