@@ -125,6 +125,7 @@ def view_project(request, project_label):
 
 def view_build(request, project_label, build_id):
     build = get_object_or_404(Build, project__label=project_label, id=build_id)
+    project = build.project
     last_build = build.get_last_build()
     next_build = build.get_next_build()
 
@@ -139,6 +140,7 @@ def view_build(request, project_label, build_id):
     changes = _get_changes(last_build, test_list)
 
     return render(request, 'zumanji/build.html', {
+        'project': project,
         'build': build,
         'last_build': last_build,
         'next_build': next_build,
@@ -184,6 +186,7 @@ def view_test(request, project_label, build_id, test_label):
 
     return render(request, 'zumanji/test.html', {
         'breadcrumbs': breadcrumbs,
+        'project': project,
         'build': build,
         'last_build': last_build,
         'next_build': next_build,
