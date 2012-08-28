@@ -177,13 +177,12 @@ class Command(BaseCommand):
 
                 # Update aggregated data
                 group_durations = []
-                # {interface: {test_id: [duration]}}
-                interface_durations = defaultdict(lambda: defaultdict(list))
+                interface_durations = defaultdict(list)
 
                 for test in (tests_by_id[t['id']] for t in tests):
                     group_durations.append(test.mean_duration)
                     for interface, values in test.data.iteritems():
-                        interface_durations[interface][test.label].append(values['mean_duration'])
+                        interface_durations[interface].append(values)
 
                 group_num_tests = len(group_durations)
                 group_total_duration = sum(group_durations)
@@ -191,9 +190,9 @@ class Command(BaseCommand):
 
                 td_data = {}
                 for interface, values in interface_durations.iteritems():
-                    durations = [sum(v) for k, v in values.iteritems()]
+                    durations = [v['mean_duration'] for v in values]
                     td_data[interface] = {
-                        'mean_calls': len(durations),
+                        'mean_calls': sum(v['mean_calls'] for v in values),
                         'mean_duration': sum(durations),
                         'upper_duration': durations[-1],
                         'lower_duration': durations[0],

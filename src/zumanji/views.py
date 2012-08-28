@@ -1,7 +1,7 @@
 import itertools
 from collections import defaultdict
 from django.core.urlresolvers import reverse
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.utils import simplejson
 from zumanji.models import Project, Build, Test
 
@@ -110,7 +110,7 @@ def index(request):
 
 
 def view_project(request, project_label):
-    project = Project.objects.get(label=project_label)
+    project = get_object_or_404(Project, label=project_label)
 
     build_list = list(Build.objects
         .filter(project=project)
@@ -124,7 +124,7 @@ def view_project(request, project_label):
 
 
 def view_build(request, project_label, build_id):
-    build = Build.objects.get(project__label=project_label, id=build_id)
+    build = get_object_or_404(Build, project__label=project_label, id=build_id)
     last_build = build.get_last_build()
     next_build = build.get_next_build()
 
@@ -148,7 +148,7 @@ def view_build(request, project_label, build_id):
 
 
 def view_test(request, project_label, build_id, test_label):
-    test = Test.objects.get(project__label=project_label, build=build_id, label=test_label)
+    test = get_object_or_404(Test, project__label=project_label, build=build_id, label=test_label)
     project = test.project
     build = test.build
 
@@ -163,7 +163,8 @@ def view_test(request, project_label, build_id, test_label):
     test.historical = historical.get(test.id)
 
     if last_build:
-        changes = _get_changes(last_build.build, test_list)
+        tests_to_check = test_list
+        changes = _get_changes(last_build.build, tests_to_check)
     else:
         changes = []
 
@@ -173,14 +174,13 @@ def view_test(request, project_label, build_id, test_label):
     )
 
     breadcrumbs = [
+        (reverse('zumanji:view_build', kwargs={'project_label': project.label, 'build_id': build.id}), 'Build #%s' % build.id)
     ]
     key = []
     for part in test.label.split('.'):
         key.append(part)
         test_label = '.'.join(key)
-        breadcrumbs.append((reverse('zumanji:view_test', kwargs=dict(project_label=project.label, build_id=build.id, test_label=test_label)), part))
-
-    print data['trace']
+        breadcrumbs.append((reverse('zumanji:view_test', kwargs={'project_label': project.label, 'build_id': build.id, 'test_label': test_label}), part))
 
     return render(request, 'zumanji/test.html', {
         'breadcrumbs': breadcrumbs,
