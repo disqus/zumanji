@@ -1,12 +1,11 @@
 {% extends "zumanji/layout.html" %}
 
 {% block content %}
-  <h3>Latest Builds</h3>
+  <h3>Latest Builds for {{ project.label }}</h3>
   <table class="table table-striped table-bordered">
     <thead>
       <tr>
         <th style="width:60px; text-align:right;">ID</th>
-        <th style="width:150px;">Project</th>
         <th>Revision</th>
         <th style="width:180px;">Datetime</th>
         <th style="width:100px; text-align:center;">Tests</th>
@@ -17,7 +16,6 @@
       {% for build in build_list %}
         <tr>
           <td style="text-align:right;"><a href="{% url zumanji:view_build project_label=build.project.label, build_id=build.id %}">B{{ build.id }}</a></td>
-          <td><a href="{% url zumanji:view_project project_label=build.project.label %}">{{ build.project.label }}</a></td>
           <td>{{ build.revision.label }}</td>
           <td>{{ build.datetime }}</td>
           <td style="text-align:center;">{{ build.num_tests }}</td>

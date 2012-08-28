@@ -2,7 +2,7 @@
   <dt>ID</dt>
   <dd><a href="{% url zumanji:view_build project_label=build.project.label build_id=build.id %}">B{{ build.id }}</a></dd>
   <dt>Project</dt>
-  <dd>{{ build.project.label }}</dd>
+  <dd><a href="{% url zumanji:view_project project_label=build.project.label %}">{{ build.project.label }}</a></dd>
   <dt>Revision</dt>
   <dd>{{ build.revision.label }}</dd>
   <dt>Duration:</dt>

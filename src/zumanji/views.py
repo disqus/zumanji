@@ -117,7 +117,7 @@ def view_project(request, project_label):
         .order_by('-datetime')
         .select_related('revision', 'project'))
 
-    return render(request, 'zumanji/index.html', {
+    return render(request, 'zumanji/project.html', {
         'project': project,
         'build_list': build_list,
     })
