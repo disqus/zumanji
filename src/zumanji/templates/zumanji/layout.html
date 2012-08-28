@@ -35,8 +35,29 @@
       .brand:hover {
         color: #08C;
       }
+      .meta {
+        color: #888;
+      }
+      .increase {
+        color: red;
+      }
+      .decrease {
+        color: green;
+      }
+      .jqstooltip {
+        font-size: 0.9em !important;
+      }
+      .jqstooltip table th {
+        text-align: right;
+      }
+      .change-increase {
+        color: red;
+      }
+      .change-decrease {
+        color: green;
+      }
     </style>
-    <link href="{{ STATIC_URL }}zumanji//css/bootstrap-responsive.css" rel="stylesheet">
+    <link href="{{ STATIC_URL }}zumanji/css/bootstrap-responsive.css" rel="stylesheet">
 
     <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
     <!--[if lt IE 9]>
@@ -73,7 +94,7 @@
     <footer id="footer">
         <div class="container">
             {% block footer %}
-                <a href="https://github.com/disqus/zumanji">Zumanji</a> is Open Source Software | Inspired by the work of <a href="http://twitter.com/zmanji">@zmanji</a>, the greatest <a href="http://code.disqus.com">DISQUS</a> intern of all time.
+                <a href="https://github.com/disqus/zumanji">Zumanji</a> is Open Source Software | A tribute to <a href="http://twitter.com/zmanji">@zmanji</a>, the greatest <a href="http://code.disqus.com" style="text-decoration:line-through">DISQUS</a> intern ever.
             {% endblock %}
         </div>
     </footer>
@@ -98,20 +119,38 @@
         });
       });
 
+      function floatFormat(value){
+        return Math.round(value*100) / 100;
+      }
+
       // Render sparklines
       $('.sparkline').each(function(){
         var $el = $(this);
         var values = []
         $.each($el.attr('data-values').split(','), function(_, value){
-          if (value === '') {
-            value = null;
-          }
-          values.push(value);
+          values.push(value ? value.split('|') : []);
         });
 
         $el.sparkline(values, {
           type: 'bar',
+          width: $el.attr('data-width'),
+          height: $el.attr('data-height'),
           barColor: '#08C',
+          nullColor: '#999',
+          barWidth: $el.attr('data-bar-width'),
+          barSpacing: $el.attr('data-bar-spacing'),
+          tooltipClassname: 'jqstooltip',
+          tooltipFormatter: function(sparkline, options, fields){
+            if (fields.length != 4) {
+              return '(No data)';
+            }
+            return '<table>'
+              + '<tr><th>Time Spent:</th><td>' + floatFormat(fields[3].value) + '</td></tr>'
+              + '<tr><th>Redis:</th><td>' + floatFormat(fields[2].value) + '</td></tr>'
+              + '<tr><th>SQL:</th><td>' + floatFormat(fields[1].value) + '</td></tr>'
+              + '<tr><th>Cache:</th><td>' + floatFormat(fields[0].value) + '</td></tr>'
+              + '</table>';
+          },
           colorMap: $.range_map({
             0: '#08C',
             '1:': 'red'

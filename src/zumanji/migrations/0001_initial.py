@@ -69,6 +69,7 @@ class Migration(SchemaMigration):
             ('revision', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['zumanji.Revision'])),
             ('build', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['zumanji.Build'])),
             ('group', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['zumanji.TestGroup'])),
+            ('test_id', self.gf('django.db.models.fields.CharField')(max_length=255)),
             ('label', self.gf('django.db.models.fields.CharField')(max_length=255)),
             ('duration', self.gf('django.db.models.fields.FloatField')(default=0.0)),
             ('description', self.gf('django.db.models.fields.TextField')(null=True)),
@@ -76,8 +77,8 @@ class Migration(SchemaMigration):
         ))
         db.send_create_signal('zumanji', ['Test'])
 
-        # Adding unique constraint on 'Test', fields ['group', 'label']
-        db.create_unique('zumanji_test', ['group_id', 'label'])
+        # Adding unique constraint on 'Test', fields ['build', 'test_id']
+        db.create_unique('zumanji_test', ['build_id', 'test_id'])
 
         # Adding model 'TestData'
         db.create_table('zumanji_testdata', (
@@ -99,8 +100,8 @@ class Migration(SchemaMigration):
         # Removing unique constraint on 'TestData', fields ['test', 'key']
         db.delete_unique('zumanji_testdata', ['test_id', 'key'])
 
-        # Removing unique constraint on 'Test', fields ['group', 'label']
-        db.delete_unique('zumanji_test', ['group_id', 'label'])
+        # Removing unique constraint on 'Test', fields ['build', 'test_id']
+        db.delete_unique('zumanji_test', ['build_id', 'test_id'])
 
         # Removing unique constraint on 'TestGroup', fields ['build', 'label']
         db.delete_unique('zumanji_testgroup', ['build_id', 'label'])
@@ -155,7 +156,7 @@ class Migration(SchemaMigration):
             'project': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['zumanji.Project']"})
         },
         'zumanji.test': {
-            'Meta': {'unique_together': "(('group', 'label'),)", 'object_name': 'Test'},
+            'Meta': {'unique_together': "(('build', 'test_id'),)", 'object_name': 'Test'},
             'build': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['zumanji.Build']"}),
             'data': ('jsonfield.fields.JSONField', [], {'default': '{}'}),
             'description': ('django.db.models.fields.TextField', [], {'null': 'True'}),
@@ -164,7 +165,8 @@ class Migration(SchemaMigration):
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'label': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
             'project': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['zumanji.Project']"}),
-            'revision': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['zumanji.Revision']"})
+            'revision': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['zumanji.Revision']"}),
+            'test_id': ('django.db.models.fields.CharField', [], {'max_length': '255'})
         },
         'zumanji.testdata': {
             'Meta': {'unique_together': "(('test', 'key'),)", 'object_name': 'TestData'},

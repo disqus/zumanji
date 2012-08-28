@@ -1,6 +1,11 @@
 <tr>
   <td style="text-align:right;"><a href="{% url zumanji:view_test test_id=test.id %}">T{{ test.id }}</a></td>
-  <td>{{ test.label }}</td>
+  <td>
+    {{ test.label }}<br>
+    {% if test.label != test.test_id %}
+      <small>{{ test.test_id }}</small>
+    {% endif %}
+  </td>
   <td style="text-align:center;">
     {% if test.data.cache %}
         {{ test.data.cache.duration|floatformat:2 }} s<br><small>{{ test.data.cache.calls }} calls</small>

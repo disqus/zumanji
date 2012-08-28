@@ -51,6 +51,26 @@ class Build(models.Model):
         self.project = self.revision.project
         super(Build, self).save(*args, **kwargs)
 
+    def get_last_build(self):
+        try:
+            return type(self).objects.filter(
+                datetime__lt=self.datetime
+            ).exclude(
+                id=self.id,
+            ).order_by('-datetime')[0]
+        except IndexError:
+            return None
+
+    def get_next_build(self):
+        try:
+            return type(self).objects.filter(
+                datetime__gt=self.datetime
+            ).exclude(
+                id=self.id,
+            ).order_by('datetime')[0]
+        except IndexError:
+            return None
+
 
 class TestGroup(models.Model):
     project = models.ForeignKey(Project)
@@ -76,19 +96,42 @@ class TestGroup(models.Model):
         self.project = self.revision.project
         super(TestGroup, self).save(*args, **kwargs)
 
+    def get_last_build(self):
+        try:
+            return type(self).objects.filter(
+                build__datetime__lt=self.build.datetime,
+                label=self.label,
+            ).exclude(
+                build=self.build,
+            ).order_by('-build__datetime')[0]
+        except IndexError:
+            return None
+
+    def get_next_build(self):
+        try:
+            return type(self).objects.filter(
+                build__datetime__gt=self.build.datetime,
+                label=self.label,
+            ).exclude(
+                build=self.build,
+            ).order_by('build__datetime')[0]
+        except IndexError:
+            return None
+
 
 class Test(models.Model, TestMixin):
     project = models.ForeignKey(Project)
     revision = models.ForeignKey(Revision)
     build = models.ForeignKey(Build)
     group = models.ForeignKey(TestGroup)
+    test_id = models.CharField(max_length=255)
     label = models.CharField(max_length=255)
     duration = models.FloatField(default=0.0)
     description = models.TextField(null=True)
     data = JSONField(default={})
 
     class Meta:
-        unique_together = (('group', 'label'),)
+        unique_together = (('build', 'test_id'),)
 
     def __unicode__(self):
         return self.label
@@ -98,6 +141,28 @@ class Test(models.Model, TestMixin):
         self.revision = self.build.revision
         self.project = self.revision.project
         super(Test, self).save(*args, **kwargs)
+
+    def get_last_build(self):
+        try:
+            return type(self).objects.filter(
+                build__datetime__lt=self.build.datetime,
+                test_id=self.test_id,
+            ).exclude(
+                build=self.build,
+            ).order_by('-build__datetime')[0]
+        except IndexError:
+            return None
+
+    def get_next_build(self):
+        try:
+            return type(self).objects.filter(
+                build__datetime__gt=self.build.datetime,
+                test_id=self.test_id,
+            ).exclude(
+                build=self.build,
+            ).order_by('build__datetime')[0]
+        except IndexError:
+            return None
 
 
 class TestData(models.Model):

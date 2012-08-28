@@ -4,6 +4,7 @@ from collections import defaultdict
 from django.db import transaction
 from django.utils import simplejson
 from django.core.management.base import BaseCommand, CommandError
+from optparse import make_option
 from zumanji.models import Project, Revision, Build, Test, TestGroup, TestData
 
 
@@ -11,9 +12,7 @@ def regroup_tests(tests):
     grouped = defaultdict(list)
 
     for test in tests:
-        grouper = test['id']
-        if '_' in grouper:
-            grouper = grouper.rsplit('_', 1)[0]
+        grouper = test.get('group') or test.get('label') or test['id']
         grouped[grouper].append(test)
 
     return grouped
@@ -27,7 +26,10 @@ def format_data(interface, data):
         args = data['query_params']
     elif interface in ('redis', 'pipelined_redis'):
         command = data['command']
-        args = [data['other_args']]
+        if 'actions' in data:
+            args = data['actions']
+        else:
+            args = [data['other_args']]
     elif interface == 'cache':
         command = data['action']
         args = [data['key']]
@@ -50,9 +52,18 @@ def format_data(interface, data):
     }
 
 
+def percentile(values, percentile=90):
+    return values[int(len(values) * (percentile / 100.0))]
+
+
 class Command(BaseCommand):
     args = '<json_file json_file ...>'
     help = 'Imports the specified JSON files'
+
+    option_list = BaseCommand.option_list + (
+        make_option('--project', '-p', dest='project', help='Project Label'),
+        make_option('--revision', '-r', dest='revision', help='Revision Label'),
+    )
 
     @transaction.commit_on_success
     def handle(self, *args, **options):
@@ -65,14 +76,21 @@ class Command(BaseCommand):
 
             timestamp = datetime.datetime.strptime(data['time'], '%Y-%m-%dT%H:%M:%S.%f')
 
+            project_label = options.get('project') or data.get('project')
+            assert project_label, 'You must specify a project with --project <label>'
+
+            revision_label = options.get('revision') or data.get('revision')
+            assert revision_label, 'You must specify a revision with --revision <label>'
+
             project = Project.objects.get_or_create(
-                label='disqus-web',
+                label=project_label,
             )[0]
 
             revision = Revision.objects.get_or_create(
                 project=project,
-                label=data['time'],
+                label=revision_label,
             )[0]
+
 
             build, created = Build.objects.get_or_create(
                 revision=revision,
@@ -81,16 +99,17 @@ class Command(BaseCommand):
 
             num_tests = 0
             total_duration = 0.0
-            for group_label, tests in regroup_tests(data['tests']).iteritems():
+            for grouper, tests in regroup_tests(data['tests']).iteritems():
                 group = TestGroup.objects.get_or_create(
                     build=build,
-                    label=group_label,
+                    label=grouper,
                 )[0]
                 group_durations = []
+                # {interface: {test_id: [duration]}}
+                interface_durations = defaultdict(lambda: defaultdict(list))
 
                 for test_data in tests:
                     group_durations.append(test_data['duration'])
-
                     data = []
                     extra_data = defaultdict(lambda: {
                         'calls': 0,
@@ -102,6 +121,7 @@ class Command(BaseCommand):
                             ts = datetime.datetime.strptime(item['time'], '%Y-%m-%dT%H:%M:%S.%f')
 
                             data.append((ts, interface, item))
+                            interface_durations[interface][test_data['id']].append(item['duration'])
 
                     data = [format_data(*d[1:]) for d in sorted(data, key=lambda x: x[0])]
 
@@ -109,17 +129,21 @@ class Command(BaseCommand):
                         extra_data[item['interface']]['calls'] += 1
                         extra_data[item['interface']]['duration'] += item['duration']
 
+                    test_label = test_data.get('label') or test_data['id']
+
                     test, created = Test.objects.get_or_create(
                         group=group,
-                        label=test_data['id'],
+                        test_id=test_data['id'],
                         defaults=dict(
-                            description=test_data['doc'].strip(),
+                            description=(test_data.get('doc') or '').strip(),
                             duration=test_data['duration'],
                             data=extra_data,
+                            label=test_label,
                         )
                     )
-                    if not created and test.data != extra_data:
+                    if not created:
                         test.data = extra_data
+                        test.label = test_label
                         test.save()
 
                     td, created = TestData.objects.get_or_create(
@@ -137,12 +161,24 @@ class Command(BaseCommand):
                 group_total_duration = sum(group_durations)
                 group_durations.sort()
 
+                td_data = {}
+                for interface, values in interface_durations.iteritems():
+                    durations = [sum(v) for k, v in values.iteritems()]
+                    td_data[interface] = {
+                        'mean_calls': len(durations),
+                        'mean_duration': sum(durations),
+                        'upper_duration': durations[-1],
+                        'lower_duration': durations[0],
+                        'upper90_duration': percentile(durations, 90),
+                    }
+
                 TestGroup.objects.filter(id=group.id).update(
                     num_tests=group_num_tests,
                     mean_duration=group_total_duration,
                     upper_duration=group_durations[-1],
                     lower_duration=group_durations[0],
-                    upper90_duration=group_durations[int(group_num_tests * (90 / 100.0))],
+                    upper90_duration=percentile(group_durations, 90),
+                    data=td_data,
                 )
 
                 num_tests += group_num_tests

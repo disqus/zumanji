@@ -1,7 +1,11 @@
+{% load zumanji_helpers %}
+
 <tr>
   <td style="text-align:right;"><a href="{% url zumanji:view_test_group group_id=group.id %}">G{{ group.id }}</a></td>
-  <td>{{ group.label }}</td>
+  <td>
+    {{ group.label }}
+  </td>
   <td style="text-align:center;">{{ group.num_tests }}</td>
   <td style="text-align:center;">{{ group.upper90_duration|floatformat:3 }} s</td>
-  <td style="text-align:center;"><span class="sparkline" data-values="{{ group.historical|join:"," }}"></span></td>
+  <td style="text-align:center;"><span class="sparkline" data-values="{{ group.historical|format_historical }}"></span></td>
 </tr>
