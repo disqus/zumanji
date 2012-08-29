@@ -11,11 +11,11 @@ HISTORICAL_POINTS = 25
 def _get_historical_data(build, test_list):
     # fetch 50 previous builds for comparing results
     previous_builds = list(Build.objects.filter(
-        datetime__lt=build.datetime
-    ).exclude(
-        id=build.id,
-    ).order_by('-datetime')
-     .values_list('id', flat=True)[:HISTORICAL_POINTS - 1][::-1])
+            datetime__lt=build.datetime
+        ).exclude(
+            id=build.id,
+        ).order_by('-datetime')
+         .values_list('id', flat=True)[:HISTORICAL_POINTS - 1][::-1])
 
     previous_tests = list(Test.objects.filter(
             build__in=previous_builds,

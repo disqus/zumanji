@@ -8,6 +8,15 @@ from optparse import make_option
 from zumanji.models import Project, Revision, Build, Test, TestData
 
 
+def count_leaves_with_tests(labels):
+    # test.label: set(leaves)
+    counts = defaultdict(int)
+    for label in labels:
+        counts[label.rsplit('.', 1)[0]] += 1
+
+    return counts
+
+
 def regroup_tests(tests):
     grouped = defaultdict(list)
 
@@ -58,7 +67,7 @@ def percentile(values, percentile=90):
     return values[int(len(values) * (percentile / 100.0))]
 
 
-def create_test_leaf(data, parent):
+def create_test_leaf(build, data, parent):
     interface_data = []
     for interface, values in data.get('interfaces', {}).iteritems():
         for item in values:
@@ -77,7 +86,7 @@ def create_test_leaf(data, parent):
         extra_data[item['interface']]['mean_duration'] += item['duration']
 
     test, created = Test.objects.get_or_create(
-        parent=parent,
+        build=build,
         label=data['id'],
         defaults=dict(
             description=description,
@@ -89,6 +98,7 @@ def create_test_leaf(data, parent):
         )
     )
     if not created:
+        test.parent = parent
         test.data = extra_data
         test.save()
 
@@ -151,26 +161,37 @@ class Command(BaseCommand):
             tests_by_id = {}
             grouped_tests = regroup_tests(data['tests'])
 
-            # Create all parents
-            for label, _ in grouped_tests:
-                if '.' in label:
-                    parent = tests_by_id[label.rsplit('.', 1)[0]]
-                else:
-                    parent = None
-                tests_by_id[label] = Test.objects.get_or_create(
+            # Eliminate useless parents (parents which only have a single child)
+            leaf_counts = count_leaves_with_tests((t['id'] for t in data['tests']))
+
+            def find_parent(label):
+                if '.' not in label:
+                    return None
+
+                key = label.split('.')[:-1]
+                while key:
+                    path = '.'.join(key)
+                    if path in tests_by_id:
+                        return tests_by_id[path]
+                    key.pop()
+                return None
+
+            for label, tests in grouped_tests:
+                if leaf_counts.get(label) < 1:
+                    continue
+
+                print 'Creating branch', label
+
+                branch = Test.objects.get_or_create(
                     project=project,
                     revision=revision,
                     build=build,
                     label=label,
-                    parent=parent,
                 )[0]
 
-            for label, tests in grouped_tests:
                 for test_data in tests:
                     if test_data['id'] not in tests_by_id:
-                        if '.' in test_data['id']:
-                            parent = tests_by_id[test_data['id'].rsplit('.', 1)[0]]
-                        test = create_test_leaf(test_data, parent)
+                        test = create_test_leaf(build, test_data, branch)
                         num_tests += 1
                         total_duration += test.mean_duration
                         tests_by_id[test.label] = test
@@ -199,8 +220,10 @@ class Command(BaseCommand):
                         'upper90_duration': percentile(durations, 90),
                     }
 
-                test = tests_by_id[label]
-                Test.objects.filter(id=test.id).update(
+                parent = find_parent(label)
+
+                branch = Test.objects.filter(id=branch.id).update(
+                    parent=parent,
                     label=label,
                     num_tests=group_num_tests,
                     mean_duration=group_total_duration,

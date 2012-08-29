@@ -95,8 +95,8 @@ class Test(models.Model, TestMixin):
     def save(self, *args, **kwargs):
         if self.parent:
             self.build = self.parent.build
-            self.revision = self.build.revision
-            self.project = self.revision.project
+        self.revision = self.build.revision
+        self.project = self.revision.project
         super(Test, self).save(*args, **kwargs)
 
     def get_last_build(self):
