@@ -126,6 +126,14 @@ class Test(models.Model, TestMixin):
         except IndexError:
             return None
 
+    def get_previous_builds(self):
+        return Build.objects.filter(
+            datetime__lt=self.build.datetime,
+            test__label=self.label,
+        ).exclude(
+            id=self.build.id,
+        ).order_by('-datetime')
+
     def get_context(self):
         # O(N), so dont abuse it
         nodes = []

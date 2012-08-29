@@ -219,17 +219,11 @@ def view_test(request, project_label, build_id, test_label):
         .select_related('parent'))
 
     # this is actually a <Test>
-    previous_build = test.get_test_in_previous_build()
-    next_build = test.get_test_in_next_build()
+    previous_test_by_build = test.get_test_in_previous_build()
+    next_test_by_build = test.get_test_in_next_build()
 
     historical = _get_historical_data(build, [test])
     test.historical = historical.get(test.id)
-
-    if previous_build:
-        tests_to_check = test_list
-        changes = _get_changes(previous_build.build, tests_to_check)
-    else:
-        changes = []
 
     breadcrumbs = [
         (reverse('zumanji:view_build', kwargs={'project_label': project.label, 'build_id': build.id}), 'Build #%s' % build.id)
@@ -246,17 +240,40 @@ def view_test(request, project_label, build_id, test_label):
         )
         last = node.label + '.'  # include the dot
 
-    trace_results = _get_trace_data(test, previous_build)
+    previous_builds = list(test.get_previous_builds().select_related('revision')[:50])
+
+    compare_with = request.GET.get('compare_with')
+    if compare_with:
+        try:
+            compare_build = Build.objects.get(project__label=project_label, id=compare_with)
+        except Build.DoesNotExist:
+            compare_build = None
+    else:
+        compare_build = previous_test_by_build.build if previous_test_by_build else None
+
+    try:
+        compare_test = compare_build.test_set.get(label=test.label)
+    except Test.DoesNotExist:
+        compare_test = None
+
+    trace_results = _get_trace_data(test, compare_test)
+    if previous_test_by_build:
+        tests_to_check = test_list
+        changes = _get_changes(compare_build, tests_to_check)
+    else:
+        changes = []
 
     return render(request, 'zumanji/test.html', {
         'breadcrumbs': breadcrumbs,
         'project': project,
         'build': build,
-        'previous_build': previous_build,
-        'next_build': next_build,
+        'previous_test_by_build': previous_test_by_build,
+        'next_test_by_build': next_test_by_build,
+        'previous_builds': previous_builds,
         'test': test,
         'test_list': test_list,
         'changes': changes,
+        'compare_build': compare_build,
         'trace_results': trace_results,
         'trace_diffs': sum(sum(1 for t, c in n['calls'] if c is None) for n in trace_results)
     })

@@ -4,9 +4,9 @@
 
 {% block content %}
   <ul class="pager">
-    {% if previous_build %}
+    {% if previous_test_by_build %}
       <li class="previous">
-        <a href="{% url zumanji:view_test project_label=previous_build.project.label build_id=previous_build.build_id test_label=previous_build.label %}">&larr; Previous Build (#{{ previous_build.build_id }})</a>
+        <a href="{% url zumanji:view_test project_label=previous_test_by_build.project.label build_id=previous_test_by_build.build_id test_label=previous_test_by_build.label %}">&larr; Previous Build (#{{ previous_test_by_build.build_id }})</a>
       </li>
     {% else %}
       <li class="previous disabled">
@@ -14,9 +14,9 @@
       </li>
     {% endif %}
 
-    {% if next_build %}
+    {% if next_test_by_build %}
       <li class="next">
-        <a href="{% url zumanji:view_test project_label=next_build.project.label build_id=next_build.build_id test_label=next_build.label %}">Next Build (#{{ next_build.build_id }}) &rarr;</a>
+        <a href="{% url zumanji:view_test project_label=next_test_by_build.project.label build_id=next_test_by_build.build_id test_label=next_test_by_build.label %}">Next Build (#{{ next_test_by_build.build_id }}) &rarr;</a>
       </li>
     {% else %}
       <li class="next disabled">
@@ -74,6 +74,21 @@
     <li class="{% if changes and not trace_results %}active{% endif %}"><a href="#changes" data-toggle="tab">Changes ({{ changes|length }})</a></li>
     {% if trace_results %}
       <li class="{% if not changes and trace_results %}active{% endif %}"><a href="#trace" data-toggle="tab">Trace ({{ trace_diffs }} diffs)</a></li>
+    {% endif %}
+    {% if previous_builds %}
+      <li class="pull-right dropdown">
+        <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+          <strong>Compare With:</strong> #{{ compare_build.id }} - {{ compare_build.revision.label }}
+          <b class="caret"></b>
+        </a>
+        <ul class="dropdown-menu">
+          <li>
+            {% for b in previous_builds %}
+              <li><a href="?compare_with={{ b.id }}">#{{ b.id }} - {{ b.revision.label }}</a></li>
+            {% endfor %}
+          </li>
+        </ul>
+      </li>
     {% endif %}
   </ul>
   <div class="tab-content">
