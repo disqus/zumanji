@@ -10,11 +10,16 @@ from zumanji.models import Project, Revision, Build, Test, TestData
 
 def count_leaves_with_tests(labels):
     # test.label: set(leaves)
-    counts = defaultdict(int)
+    leaves = defaultdict(set)
     for label in labels:
-        counts[label.rsplit('.', 1)[0]] += 1
+        leaves[label].add(label)
+        parent = label.rsplit('.', 1)[0]
+        leaves[parent].add(label)
+        while len(leaves[parent]) > 1 and '.' in parent:
+            parent = parent.rsplit('.', 1)[0]
+            leaves[parent].add(parent)
 
-    return counts
+    return dict((k, len(v)) for k, v in leaves.iteritems())
 
 
 def regroup_tests(tests):
@@ -172,6 +177,7 @@ class Command(BaseCommand):
                 key = label.split('.')[:-1]
                 while key:
                     path = '.'.join(key)
+                    print label, path
                     if path in tests_by_id:
                         return tests_by_id[path]
                     key.pop()
@@ -189,13 +195,20 @@ class Command(BaseCommand):
                     build=build,
                     label=label,
                 )[0]
+                tests_by_id[branch.label] = branch
 
-                for test_data in tests:
-                    if test_data['id'] not in tests_by_id:
-                        test = create_test_leaf(build, test_data, branch)
-                        num_tests += 1
-                        total_duration += test.mean_duration
-                        tests_by_id[test.label] = test
+            for label, tests in reversed(grouped_tests):
+                if label not in tests_by_id:
+                    continue
+
+                branch = tests_by_id[label]
+                for test_data in (t for t in tests if t['id'] not in tests_by_id):
+                    # parent = find_parent(test_data['id'])
+                    test = create_test_leaf(build, test_data, branch)
+                    tests_by_id[test.label] = test
+
+                    num_tests += 1
+                    total_duration += test.mean_duration
 
                 # Update aggregated data
                 group_durations = []
@@ -223,7 +236,7 @@ class Command(BaseCommand):
 
                 parent = find_parent(label)
 
-                branch = Test.objects.filter(id=branch.id).update(
+                tests_by_id[branch.label] = Test.objects.filter(id=branch.id).update(
                     parent=parent,
                     label=label,
                     num_tests=group_num_tests,
