@@ -2,9 +2,9 @@
 
 {% block content %}
   <ul class="pager">
-    {% if last_build %}
+    {% if previous_build %}
       <li class="previous">
-        <a href="{% url zumanji:view_build project_label=last_build.project.label build_id=last_build.id %}">&larr; Previous Build (B{{ last_build.id }})</a>
+        <a href="{% url zumanji:view_build project_label=previous_build.project.label build_id=previous_build.id %}">&larr; Previous Build (#{{ previous_build.id }})</a>
       </li>
     {% else %}
       <li class="previous disabled">
@@ -14,7 +14,7 @@
 
     {% if next_build %}
       <li class="next">
-        <a href="{% url zumanji:view_build project_label=next_build.project.label build_id=next_build.id %}">Next Build (B{{ next_build.id }}) &rarr;</a>
+        <a href="{% url zumanji:view_build project_label=next_build.project.label build_id=next_build.id %}">Next Build (#{{ next_build.id }}) &rarr;</a>
       </li>
     {% else %}
       <li class="next disabled">
@@ -27,7 +27,7 @@
   {% include "zumanji/includes/build_details.html" %}
 
   {% if changes %}
-    <h3>Changes since <a href="{% url zumanji:view_build project_label=last_build.project.label build_id=last_build.id %}">B{{ last_build.id }}</a></h3>
+    <h3>Changes since <a href="{% url zumanji:view_build project_label=previous_build.project.label build_id=previous_build.id %}">#{{ previous_build.id }}</a></h3>
     <table class="table table-bordered table-striped">
       <thead>
         <tr>

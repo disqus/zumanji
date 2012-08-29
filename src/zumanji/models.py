@@ -51,7 +51,7 @@ class Build(models.Model):
         self.project = self.revision.project
         super(Build, self).save(*args, **kwargs)
 
-    def get_last_build(self):
+    def get_previous_build(self):
         try:
             return type(self).objects.filter(
                 datetime__lt=self.datetime
@@ -99,7 +99,7 @@ class Test(models.Model, TestMixin):
         self.project = self.revision.project
         super(Test, self).save(*args, **kwargs)
 
-    def get_last_build(self):
+    def get_test_in_previous_build(self):
         try:
             return type(self).objects.filter(
                 build__datetime__lt=self.build.datetime,
@@ -110,7 +110,7 @@ class Test(models.Model, TestMixin):
         except IndexError:
             return None
 
-    def get_next_build(self):
+    def get_test_in_next_build(self):
         try:
             return type(self).objects.filter(
                 build__datetime__gt=self.build.datetime,

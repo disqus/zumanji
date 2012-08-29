@@ -48,18 +48,18 @@ def _get_historical_data(build, test_list):
     return results
 
 
-def _get_changes(last_build, objects):
-    if not (last_build and objects):
+def _get_changes(previous_build, objects):
+    if not (previous_build and objects):
         return {}
 
-    qs = last_build.test_set.filter(label__in=[o.label for o in objects])
+    qs = previous_build.test_set.filter(label__in=[o.label for o in objects])
 
-    last_build_objects = dict((o.label, o) for o in qs)
+    previous_build_objects = dict((o.label, o) for o in qs)
     changes = dict()
 
     # {group: [{notes: notes, type: type}]}
     for obj in objects:
-        last_obj = last_build_objects.get(obj.label)
+        last_obj = previous_build_objects.get(obj.label)
         obj_changes = {
             'interfaces': {},
             'status': 'new' if last_obj is None else None,
@@ -126,7 +126,7 @@ def view_project(request, project_label):
 def view_build(request, project_label, build_id):
     build = get_object_or_404(Build, project__label=project_label, id=build_id)
     project = build.project
-    last_build = build.get_last_build()
+    previous_build = build.get_previous_build()
     next_build = build.get_next_build()
 
     test_list = list(build.test_set
@@ -137,12 +137,12 @@ def view_build(request, project_label, build_id):
     for test in test_list:
         test.historical = historical.get(test.id)
 
-    changes = _get_changes(last_build, test_list)
+    changes = _get_changes(previous_build, test_list)
 
     return render(request, 'zumanji/build.html', {
         'project': project,
         'build': build,
-        'last_build': last_build,
+        'previous_build': previous_build,
         'next_build': next_build,
         'test_list': test_list,
         'changes': changes,
@@ -157,16 +157,16 @@ def view_test(request, project_label, build_id, test_label):
     test_list = list(Test.objects.filter(parent=test)
         .order_by('-upper90_duration'))
 
-    # this is actually a <TestGroup>
-    last_build = test.get_last_build()
-    next_build = test.get_next_build()
+    # this is actually a <Test>
+    previous_build = test.get_test_in_previous_build()
+    next_build = test.get_test_in_next_build()
 
     historical = _get_historical_data(build, [test])
     test.historical = historical.get(test.id)
 
-    if last_build:
+    if previous_build:
         tests_to_check = test_list
-        changes = _get_changes(last_build.build, tests_to_check)
+        changes = _get_changes(previous_build.build, tests_to_check)
     else:
         changes = []
 
@@ -195,7 +195,7 @@ def view_test(request, project_label, build_id, test_label):
         'breadcrumbs': breadcrumbs,
         'project': project,
         'build': build,
-        'last_build': last_build,
+        'previous_build': previous_build,
         'next_build': next_build,
         'test': test,
         'test_list': test_list,
