@@ -177,7 +177,6 @@ class Command(BaseCommand):
                 key = label.split('.')[:-1]
                 while key:
                     path = '.'.join(key)
-                    print label, path
                     if path in tests_by_id:
                         return tests_by_id[path]
                     key.pop()
