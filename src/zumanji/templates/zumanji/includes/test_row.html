@@ -4,30 +4,27 @@
   <td>
     <a href="{% url zumanji:view_test project_label=test.project.label build_id=test.build.id test_label=test.label %}">{{ test.label }}</a>{% if test.num_tests %} <small>({{ test.num_tests }} tests)</small>{% endif %}
   </td>
-  <td style="text-align:center;">
+  <td style="text-align:center; vertical-align:middle;">
     {% if test.data.cache %}
         {{ test.data.cache.mean_duration|floatformat:2 }} s<br><small>{{ test.data.cache.mean_calls }} calls</small>
     {% else %}
-        &ndash;<br>
-        <small>no calls</small>
+        &mdash;
     {% endif %}
   </td>
-  <td style="text-align:center;">
+  <td style="text-align:center; vertical-align:middle;">
     {% if test.data.redis %}
         {{ test.data.redis.mean_duration|floatformat:2 }} s<br><small>{{ test.data.redis.mean_calls }} calls</small>
     {% else %}
-        &ndash;<br>
-        <small>no calls</small>
+        &mdash;
     {% endif %}
   </td>
-  <td style="text-align:center;">
+  <td style="text-align:center; vertical-align:middle;">
     {% if test.data.sql %}
         {{ test.data.sql.mean_duration|floatformat:2 }} s<br><small>{{ test.data.sql.mean_calls }} calls</small>
     {% else %}
-        &ndash;<br>
-        <small>no calls</small>
+        &mdash;
     {% endif %}
   </td>
-  <td style="text-align:center; vertical-align:center;">{{ test.mean_duration|floatformat:2 }}s</td>
+  <td style="text-align:center; vertical-align:middle;">{{ test.mean_duration|floatformat:2 }}s</td>
   {# <td style="text-align:center;"><span class="sparkline" data-height="40px" data-values="{{ test.historical|format_historical }}"></span></td> #}
 </tr>
