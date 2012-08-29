@@ -64,13 +64,13 @@
   {% endif %}
 
   <ul class="nav nav-tabs">
-    <li class="active"><a href="#changes" data-toggle="tab">Changes ({{ changes|length }})</a></li>
+    <li class="{% if changes and not trace_results %}active{% endif %}"><a href="#changes" data-toggle="tab">Changes ({{ changes|length }})</a></li>
     {% if trace_results %}
-      <li><a href="#trace" data-toggle="tab">Trace ({{ trace_diffs }} diffs)</a></li>
+      <li class="{% if not changes and trace_results %}active{% endif %}"><a href="#trace" data-toggle="tab">Trace ({{ trace_diffs }} diffs)</a></li>
     {% endif %}
   </ul>
   <div class="tab-content">
-    <div class="tab-pane active" id="changes">
+    <div class="tab-pane{% if changes and not trace_results %} active{% endif %}" id="changes">
       {% if changes %}
         <table class="table table-bordered table-striped">
           <thead>
@@ -99,7 +99,7 @@
       {% endif %}
     </div>
     {% if trace_results %}
-      <div class="tab-pane" id="trace">
+      <div class="tab-pane{% if not changes and trace_results %} active{% endif %}" id="trace">
         <div class="row">
           {% for trace in trace_results %}
           <div class="span6">
