@@ -99,6 +99,11 @@ class Test(models.Model, TestMixin):
         self.project = self.revision.project
         super(Test, self).save(*args, **kwargs)
 
+    def shortlabel(self):
+        if not self.parent:
+            return self.label
+        return self.label[len(self.parent.label) + 1:]
+
     def get_test_in_previous_build(self):
         try:
             return type(self).objects.filter(

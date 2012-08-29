@@ -1,11 +1,63 @@
+import difflib
 import itertools
 from collections import defaultdict
 from django.core.urlresolvers import reverse
 from django.shortcuts import render, get_object_or_404
 from django.utils import simplejson
-from zumanji.models import Project, Build, Test
+from django.utils.datastructures import SortedDict
+from zumanji.models import Project, Build, Test, TestData
 
 HISTORICAL_POINTS = 25
+
+
+def _get_trace_data(test, previous_test=None):
+    def make_id(call):
+        return (call['interface'], call['command'], call['module'], call['function'])
+
+    if previous_test:
+        try:
+            previous_trace = previous_test.testdata_set.get(key='trace').data
+        except TestData.DoesNotExist:
+            previous_trace = []
+    else:
+        previous_trace = []
+
+    try:
+        trace = test.testdata_set.get(key='trace').data
+    except TestData.DoesNotExist:
+        trace = []
+
+    if not (trace or previous_trace):
+        return ()
+
+    previous_trace = SortedDict((make_id(c), c) for c in previous_trace)
+    trace = SortedDict((make_id(c), c) for c in trace)
+
+    seqmatch = difflib.SequenceMatcher()
+    seqmatch.set_seqs(previous_trace.keys(), trace.keys())
+
+    trace_diff = (
+        {'test': previous_test, 'calls': []},  # left
+        {'test': test, 'calls': []},  # left
+    )
+    for tag, i1, i2, j1, j2 in seqmatch.get_opcodes():
+        if tag in ('equal', 'replace'):
+            for key in previous_trace.keys()[i1:i2]:
+                trace_diff[0]['calls'].append((tag, previous_trace[key]))
+            for key in trace.keys()[j1:j2]:
+                trace_diff[1]['calls'].append((tag, previous_trace[key]))
+        elif tag == 'delete':
+            for key in previous_trace.keys()[i1:i2]:
+                trace_diff[0]['calls'].append((tag, previous_trace[key]))
+                trace_diff[1]['calls'].append((tag, None))
+        elif tag == 'insert':
+            for key in trace.keys()[j1:j2]:
+                trace_diff[0]['calls'].append((tag, None))
+                trace_diff[1]['calls'].append((tag, trace[key]))
+        else:
+            raise ValueError(tag)
+
+    return trace_diff
 
 
 def _get_historical_data(build, test_list):
@@ -52,7 +104,9 @@ def _get_changes(previous_build, objects):
     if not (previous_build and objects):
         return {}
 
-    qs = previous_build.test_set.filter(label__in=[o.label for o in objects])
+    qs = previous_build.test_set.filter(
+        label__in=[o.label for o in objects],
+    ).select_related('parent')
 
     previous_build_objects = dict((o.label, o) for o in qs)
     changes = dict()
@@ -155,7 +209,8 @@ def view_test(request, project_label, build_id, test_label):
     build = test.build
 
     test_list = list(Test.objects.filter(parent=test)
-        .order_by('-upper90_duration'))
+        .order_by('-upper90_duration')
+        .select_related('parent'))
 
     # this is actually a <Test>
     previous_build = test.get_test_in_previous_build()
@@ -169,12 +224,6 @@ def view_test(request, project_label, build_id, test_label):
         changes = _get_changes(previous_build.build, tests_to_check)
     else:
         changes = []
-
-    data = dict(
-        # We have to force JSON deserialization here due to the use of values_list
-        (k, simplejson.loads(v))
-        for k, v in test.testdata_set.values_list('key', 'data')
-    )
 
     breadcrumbs = [
         (reverse('zumanji:view_build', kwargs={'project_label': project.label, 'build_id': build.id}), 'Build #%s' % build.id)
@@ -191,6 +240,8 @@ def view_test(request, project_label, build_id, test_label):
         )
         last = node.label + '.'  # include the dot
 
+    trace_results = _get_trace_data(test, previous_build)
+
     return render(request, 'zumanji/test.html', {
         'breadcrumbs': breadcrumbs,
         'project': project,
@@ -200,5 +251,6 @@ def view_test(request, project_label, build_id, test_label):
         'test': test,
         'test_list': test_list,
         'changes': changes,
-        'data': data,
+        'trace_results': trace_results,
+        'trace_diffs': sum(sum(1 for t, c in n['calls'] if c is None) for n in trace_results)
     })

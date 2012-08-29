@@ -25,49 +25,19 @@
     {% endif %}
   </ul>
 
-  {% if changes %}
-    <h3>Changes since <a href="{% url zumanji:view_test project_label=previous_build.project.label build_id=previous_build.build_id test_label=previous_build.label %}">#{{ previous_build.build_id }}</a></h3>
-    <table class="table table-bordered table-striped">
-      <thead>
-        <tr>
-          <th>Test</th>
-          <th style="width:60px; text-align:center;">SQL</th>
-          <th style="width:60px; text-align:center;">Redis</th>
-          <th style="width:60px; text-align:center;">Cache</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for changed_test, data in changes %}
-          <tr>
-            <td>
-              <a href="{% url zumanji:view_test project_label=build.project.label build_id=build.id test_label=changed_test.label %}">{{ changed_test.label }}</a>{% if test.num_tests %} <small>({{ test.num_tests }} tests)</small>{% endif %}{% if data.status == 'new' %} <span class="label label-info">New</span>{% endif %}
-            </td>
-            <td style="text-align:center;" class="change-{{ data.interfaces.sql.type }}">{{ data.interfaces.sql.change }}</td>
-            <td style="text-align:center;" class="change-{{ data.interfaces.redis.type }}">{{ data.interfaces.redis.change }}</td>
-            <td style="text-align:center;" class="change-{{ data.interfaces.cache.type }}">{{ data.interfaces.cache.change }}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  {% endif %}
-
-  <h3>{{ test.label }} </h3>
+  <ul class="breadcrumb">
+    {% for link, label in breadcrumbs %}
+      {% if forloop.last %}
+        <li class="active">{{ label }}</li>
+      {% else %}
+       <li><a href="{{ link }}">{{ label }}</a> <span class="divider">/</span></li>
+      {% endif %}
+    {% endfor %}
+  </ul>
 
   <div style="text-align:center; margin-bottom:20px;">
     <span class="sparkline" data-values="{{ test.historical|format_historical }}" data-bar-width="42px" data-height="100px" data-bar-spacing="5px" style="line-height:100px;height:100px;"></span>
   </div>
-
-  {% if breadcrumbs %}
-    <ul class="breadcrumb">
-      {% for link, label in breadcrumbs %}
-        {% if forloop.last %}
-          <li class="active">{{ label }}</li>
-        {% else %}
-         <li><a href="{{ link }}">{{ label }}</a> <span class="divider">/</span></li>
-        {% endif %}
-      {% endfor %}
-    </ul>
-  {% endif %}
 
   <table class="table table-striped table-bordered">
     <thead>
@@ -93,23 +63,76 @@
     <blockquote>{{ test.description|linebreaks }}</blockquote>
   {% endif %}
 
-  {% if data.trace %}
-    <h3>Trace <small>{{ data.trace|length }} calls</small></h3>
-    <table class="table table-bordered table-striped">
-      <thead>
-        <th style="width:100px; text-align:right;">Interface</th>
-        <th>Command</th>
-        <th style="width:60px; text-align:center;">Duration</th>
-      </thead>
-      <tbody>
-      {% for call in data.trace %}
-        <tr>
-          <td style="text-align:right;">{{ call.interface }}</td>
-          <td><div style="padding-left: {{ call.depth }}px;">{{ call.command|truncatechars:100 }} {{ call.args|truncatechars:50 }}</div></td>
-          <td style="text-align:center;">{{ call.duration|floatformat:3 }} s</td>
-        </tr>
-      {% endfor %}
-    </table>
-  {% endif %}
-
+  <ul class="nav nav-tabs">
+    <li class="active"><a href="#changes" data-toggle="tab">Changes ({{ changes|length }})</a></li>
+    {% if trace_results %}
+      <li><a href="#trace" data-toggle="tab">Trace ({{ trace_diffs }} diffs)</a></li>
+    {% endif %}
+  </ul>
+  <div class="tab-content">
+    <div class="tab-pane active" id="changes">
+      {% if changes %}
+        <table class="table table-bordered table-striped">
+          <thead>
+            <tr>
+              <th>Test</th>
+              <th style="width:60px; text-align:center;">SQL</th>
+              <th style="width:60px; text-align:center;">Redis</th>
+              <th style="width:60px; text-align:center;">Cache</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for changed_test, data in changes %}
+              <tr>
+                <td>
+                  <a href="{% url zumanji:view_test project_label=build.project.label build_id=build.id test_label=changed_test.label %}">{{ changed_test.shortlabel }}</a>{% if changed_test.num_tests %} <small>({{ changed_test.num_tests }} tests)</small>{% endif %}{% if data.status == 'new' %} <span class="label label-info">New</span>{% endif %}
+                </td>
+                <td style="text-align:center;" class="change-{{ data.interfaces.sql.type }}">{{ data.interfaces.sql.change }}</td>
+                <td style="text-align:center;" class="change-{{ data.interfaces.redis.type }}">{{ data.interfaces.redis.change }}</td>
+                <td style="text-align:center;" class="change-{{ data.interfaces.cache.type }}">{{ data.interfaces.cache.change }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p>No changes in reported calls were seen.</p>
+      {% endif %}
+    </div>
+    {% if trace_results %}
+      <div class="tab-pane" id="trace">
+        <div class="row">
+          {% for trace in trace_results %}
+          <div class="span6">
+            <table class="table table-bordered table-striped">
+              <caption>
+                {% if trace.test %}
+                  Calls captured in <a href="{% url zumanji:view_test project_label=trace.test.project.label build_id=trace.test.build_id test_label=trace.test.label %}">Build #{{ trace.test.build_id }}</a>
+                {% else %}
+                  (No previous results captured)
+                {% endif %}
+              </caption>
+              <thead>
+                <th style="width:50px; text-align:right;">Interface</th>
+                <th>Command</th>
+                {# <th style="width:60px; text-align:center;">Duration</th> #}
+              </thead>
+              <tbody>
+              {% for tag, call in trace.calls %}
+                <tr class="diff-{{ tag }}">
+                  {% if call %}
+                    <td style="text-align:right;">{{ call.interface }}</td>
+                    <td><div style="padding-left: {{ call.depth }}px;">{{ call.command|truncatechars:30 }} {{ call.args|truncatechars:30 }}</div></td>
+                    {# <td style="text-align:center;">{{ call.duration|floatformat:3 }} s</td> #}
+                  {% else %}
+                    <td colspan="2">&nbsp;</td>
+                  {% endif %}
+                </tr>
+              {% endfor %}
+            </table>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+  </div>
 {% endblock %}
