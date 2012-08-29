@@ -11,8 +11,11 @@ HISTORICAL_POINTS = 25
 
 
 def _get_trace_data(test, previous_test=None):
-    def make_id(call):
-        return (call['interface'], call['command'], call['module'], call['function'])
+    def make_id(call, callcounts):
+        key = (call['interface'], call['command'], call['module'], call['function'])
+        callcounts[key] += 1
+
+        return (key, callcounts[key])
 
     if previous_test:
         try:
@@ -30,8 +33,11 @@ def _get_trace_data(test, previous_test=None):
     if not (trace or previous_trace):
         return ()
 
-    previous_trace = SortedDict((make_id(c), c) for c in previous_trace)
-    trace = SortedDict((make_id(c), c) for c in trace)
+    callcounts = defaultdict(int)
+    previous_trace = SortedDict((make_id(c, callcounts), c) for c in previous_trace)
+
+    callcounts = defaultdict(int)
+    trace = SortedDict((make_id(c, callcounts), c) for c in trace)
 
     seqmatch = difflib.SequenceMatcher()
     seqmatch.set_seqs(previous_trace.keys(), trace.keys())

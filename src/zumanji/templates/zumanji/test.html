@@ -59,7 +59,14 @@
     </tbody>
   </table>
 
+  {% if not test_list %}
+    {# Must be a leaf #}
+    <h4>Build Details</h4>
+    {% include "zumanji/includes/build_details.html" %}
+  {% endif %}
+
   {% if test.description %}
+    <h4>Description</h4>
     <blockquote>{{ test.description|linebreaks }}</blockquote>
   {% endif %}
 
