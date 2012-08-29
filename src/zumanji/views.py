@@ -178,11 +178,25 @@ def view_test(request, project_label, build_id, test_label):
     breadcrumbs = [
         (reverse('zumanji:view_build', kwargs={'project_label': project.label, 'build_id': build.id}), 'Build #%s' % build.id)
     ]
-    key = []
-    for part in test.label.split('.'):
-        key.append(part)
-        test_label = '.'.join(key)
-        breadcrumbs.append((reverse('zumanji:view_test', kwargs={'project_label': project.label, 'build_id': build.id, 'test_label': test_label}), part))
+    # O(N), but who cares
+    nodes = []
+    parent = test
+    while parent:
+        nodes.append(parent)
+        parent = parent.parent
+    nodes.reverse()
+
+    last = ''
+    for node in nodes:
+        node_label = node.label[len(last):]
+        breadcrumbs.append(
+            (reverse('zumanji:view_test', kwargs={
+                'project_label': project.label,
+                'build_id': build.id,
+                'test_label': node.label,
+            }), node_label)
+        )
+        last = node.label + '.'  # include the dot
 
     return render(request, 'zumanji/test.html', {
         'breadcrumbs': breadcrumbs,

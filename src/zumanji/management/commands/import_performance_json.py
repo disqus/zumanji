@@ -95,6 +95,7 @@ def create_test_leaf(build, data, parent):
             upper_duration=data['duration'],
             lower_duration=data['duration'],
             data=extra_data,
+            parent=parent,
         )
     )
     if not created:
