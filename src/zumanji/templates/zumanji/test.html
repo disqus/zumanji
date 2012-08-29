@@ -84,7 +84,7 @@
         <ul class="dropdown-menu">
           <li>
             {% for b in previous_builds %}
-              <li><a href="?compare_with={{ b.id }}">#{{ b.id }} - {{ b.revision.label }}</a></li>
+              <li{% if compare_build == b %} class="active"{% endif %}><a href="?compare_with={{ b.id }}">#{{ b.id }} - {{ b.revision.label }}</a></li>
             {% endfor %}
           </li>
         </ul>
