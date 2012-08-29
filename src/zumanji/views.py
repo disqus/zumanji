@@ -171,6 +171,7 @@ def view_test(request, project_label, build_id, test_label):
         changes = []
 
     data = dict(
+        # We have to force JSON deserialization here due to the use of values_list
         (k, simplejson.loads(v))
         for k, v in test.testdata_set.values_list('key', 'data')
     )
@@ -178,16 +179,8 @@ def view_test(request, project_label, build_id, test_label):
     breadcrumbs = [
         (reverse('zumanji:view_build', kwargs={'project_label': project.label, 'build_id': build.id}), 'Build #%s' % build.id)
     ]
-    # O(N), but who cares
-    nodes = []
-    parent = test
-    while parent:
-        nodes.append(parent)
-        parent = parent.parent
-    nodes.reverse()
-
     last = ''
-    for node in nodes:
+    for node in test.get_context():
         node_label = node.label[len(last):]
         breadcrumbs.append(
             (reverse('zumanji:view_test', kwargs={

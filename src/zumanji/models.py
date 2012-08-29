@@ -121,6 +121,16 @@ class Test(models.Model, TestMixin):
         except IndexError:
             return None
 
+    def get_context(self):
+        # O(N), so dont abuse it
+        nodes = []
+        parent = self
+        while parent:
+            nodes.append(parent)
+            parent = parent.parent
+        nodes.reverse()
+        return nodes
+
 
 class TestData(models.Model):
     project = models.ForeignKey(Project)
