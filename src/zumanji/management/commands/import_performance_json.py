@@ -57,14 +57,12 @@ def format_data(interface, data):
         'interface': interface,
         'command': command,
         'args': args,
-        'line': stacktrace['line_number'],
-        'code': stacktrace['code'],
         'function': stacktrace['function_name'],
-        'module': stacktrace['name'],
         'filename': stacktrace['file_name'],
         'duration': data['duration'],
         'time': data['time'],
         'depth': len(data['stacktrace']),
+        'stacktrace': data['stacktrace'],
     }
 
 

@@ -1,4 +1,5 @@
 from django import template
+from django.utils import simplejson
 
 register = template.Library()
 
@@ -12,3 +13,13 @@ def format_historical(data):
         else:
             result.append('')
     return ','.join(result)
+
+
+@register.filter('range')
+def range_filter(value):
+    return range(int(value))
+
+
+@register.filter
+def as_json(value):
+    return simplejson.dumps(value)

@@ -12,10 +12,10 @@ HISTORICAL_POINTS = 25
 
 def _get_trace_data(test, previous_test=None):
     def make_id(call, callcounts):
-        key = (call['interface'], call['command'], call['module'], call['function'])
+        key = hash((call['interface'], call['command'], call['filename'], call['function']))
         callcounts[key] += 1
 
-        return (key, callcounts[key])
+        return '_'.join(map(str, (key, callcounts[key])))
 
     if previous_test:
         try:
@@ -31,7 +31,7 @@ def _get_trace_data(test, previous_test=None):
         trace = []
 
     if not (trace or previous_trace):
-        return ()
+        return {}
 
     callcounts = defaultdict(int)
     previous_trace = SortedDict((make_id(c, callcounts), c) for c in previous_trace)
@@ -49,21 +49,28 @@ def _get_trace_data(test, previous_test=None):
     for tag, i1, i2, j1, j2 in seqmatch.get_opcodes():
         if tag in ('equal', 'replace'):
             for key in previous_trace.keys()[i1:i2]:
-                trace_diff[0]['calls'].append((tag, previous_trace[key]))
+                trace_diff[0]['calls'].append((tag, key, previous_trace[key]))
             for key in trace.keys()[j1:j2]:
-                trace_diff[1]['calls'].append((tag, previous_trace[key]))
+                trace_diff[1]['calls'].append((tag, key, previous_trace[key]))
         elif tag == 'delete':
             for key in previous_trace.keys()[i1:i2]:
-                trace_diff[0]['calls'].append((tag, previous_trace[key]))
-                trace_diff[1]['calls'].append((tag, None))
+                trace_diff[0]['calls'].append((tag, key, previous_trace[key]))
+                trace_diff[1]['calls'].append((tag, key, None))
         elif tag == 'insert':
             for key in trace.keys()[j1:j2]:
-                trace_diff[0]['calls'].append((tag, None))
-                trace_diff[1]['calls'].append((tag, trace[key]))
+                trace_diff[0]['calls'].append((tag, key, None))
+                trace_diff[1]['calls'].append((tag, key, trace[key]))
         else:
             raise ValueError(tag)
 
-    return trace_diff
+    all_calls = dict(previous_trace)
+    all_calls.update(trace)
+
+    return {
+        'diff': trace_diff,
+        'calls': all_calls,
+        'num_diffs': sum(sum(1 for _, _, c in n['calls'] if c is None) for n in trace_diff),
+    }
 
 
 def _get_historical_data(build, test_list):
@@ -275,5 +282,4 @@ def view_test(request, project_label, build_id, test_label):
         'changes': changes,
         'compare_build': compare_build,
         'trace_results': trace_results,
-        'trace_diffs': sum(sum(1 for t, c in n['calls'] if c is None) for n in trace_results)
     })

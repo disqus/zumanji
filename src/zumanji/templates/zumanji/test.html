@@ -73,7 +73,7 @@
   <ul class="nav nav-tabs">
     <li class="{% if changes and not trace_results %}active{% endif %}"><a href="#changes" data-toggle="tab">Changes ({{ changes|length }})</a></li>
     {% if trace_results %}
-      <li class="{% if not changes and trace_results %}active{% endif %}"><a href="#trace" data-toggle="tab">Trace ({{ trace_diffs }} diffs)</a></li>
+      <li class="{% if not changes and trace_results %}active{% endif %}"><a href="#trace" data-toggle="tab">Trace ({{ trace_results.num_diffs }} diffs)</a></li>
     {% endif %}
     {% if previous_builds %}
       <li class="pull-right dropdown">
@@ -123,9 +123,9 @@
     {% if trace_results %}
       <div class="tab-pane{% if not changes and trace_results %} active{% endif %}" id="trace">
         <div class="row">
-          {% for trace in trace_results %}
+          {% for trace in trace_results.diff %}
           <div class="span6">
-            <table class="table table-bordered table-striped">
+            <table class="table table-striped trace-diff">
               <caption>
                 {% if trace.test %}
                   Calls captured in <a href="{% url zumanji:view_test project_label=trace.test.project.label build_id=trace.test.build_id test_label=trace.test.label %}">Build #{{ trace.test.build_id }}</a>
@@ -133,17 +133,17 @@
                   (No previous results captured)
                 {% endif %}
               </caption>
-              <thead>
-                <th style="width:50px; text-align:right;">Interface</th>
-                <th>Command</th>
-                {# <th style="width:60px; text-align:center;">Duration</th> #}
-              </thead>
               <tbody>
-              {% for tag, call in trace.calls %}
-                <tr class="diff-{{ tag }}">
+              {% for tag, call_id, call in trace.calls %}
+                <tr class="diff-{{ tag }} call-{{ call_id }}" data-call="{{ call_id }}">
                   {% if call %}
-                    <td style="text-align:right;">{{ call.interface }}</td>
-                    <td><div style="padding-left: {{ call.depth }}px;">{{ call.command|truncatechars:30 }} {{ call.args|truncatechars:30 }}</div></td>
+                    <td style="text-align:right; width:50px;">{{ call.interface }}</td>
+                    <td>
+                      <div class="diff-call">
+                        {% for i in call.depth|range %}<span class="indent"></span>{% endfor %}
+                        {{ call.command }} {{ call.args }}
+                      </div>
+                    </td>
                     {# <td style="text-align:center;">{{ call.duration|floatformat:3 }} s</td> #}
                   {% else %}
                     <td colspan="2">&nbsp;</td>
@@ -156,5 +156,63 @@
         </div>
       </div>
     {% endif %}
+
   </div>
+{% endblock %}
+
+{% block scripts %}
+  {% if trace_results %}
+    <script>
+    (function(){
+      calls = {{ trace_results.calls|as_json|safe }};
+      $modal = $('<div class="modal hide fade">' + 
+        '  <div class="modal-header">' + 
+        '    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>' + 
+        '    <h3>Call Information</h3>' + 
+        '  </div>' + 
+        '  <div class="modal-body"></div>' + 
+        '  <div class="modal-footer">' + 
+        '    <button type="button" class="btn" data-dismiss="modal" aria-hidden="true">Close</button>' + 
+        '  </div>' + 
+        '</div>');
+
+      function showStacktrace(call) {
+        $tb = $('<ul class="traceback"></ul>');
+
+                  //     <ol start="{{ frame.start_lineno }}" class="context expandable" id="c{{ forloop.counter0 }}">
+                  //     {% for num, line in frame.context %}
+                  //         <li{% if num == frame.lineno %} class="active"{% else %} class="stack{{ forloop.parentloop.counter0 }} closed"{% endif %} onclick="$('.stack{{ forloop.parentloop.counter0 }}').toggleClass('closed')"><pre>{{ line }}</pre></li>
+                  //     {% endfor %}
+                  //     </ol>
+        $.each(call.stacktrace, function(f_index, frame){
+          var $frame = $('<li class="frame">' +
+            '  <p>' +
+            '    <code>' + frame.name + '</code> in <code>' + frame.function_name + '</code>' +
+            ' at line <code>' + frame.line_number + '</code>' +
+            '  </p>' +
+            '</li>');
+          var $context = $('<ol start=' + frame.code[0][0] + ' class="context expandable"></ol>');
+
+          $.each(frame.code, function(index, bit){
+            $('<li' + (bit[0] == frame.line_number ? ' class="active"': ' class="stack' + f_index + ' closed"') +
+              '  onclick="$(\'.stack' + f_index + '\').toggleClass(\'closed\')"><pre>' + bit[1] + '</pre>' +
+              '</li>').appendTo($context);
+          });
+
+          $context.appendTo($frame);
+          $frame.appendTo($tb);
+        });
+
+        $modal.find('.modal-body').html($tb);
+        $modal.modal();
+      }
+
+      $('.diff-call').click(function(){
+        var $el = $(this);
+        var call_id = $el.parents('tr').attr('data-call');
+        showStacktrace(calls[call_id]);
+      }).css('cursor', 'pointer');
+    }());
+    </script>
+  {% endif %}
 {% endblock %}
