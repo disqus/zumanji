@@ -45,10 +45,10 @@ def _get_trace_data(test, previous_test=None):
         elif tag == 'delete':
             for key in previous_trace.keys()[i1:i2]:
                 trace_diff[0]['calls'].append((tag, key, previous_trace[key]))
-                trace_diff[1]['calls'].append(('', key, None))
+                trace_diff[1]['calls'].append((tag, key, None))
         elif tag == 'insert':
             for key in trace.keys()[j1:j2]:
-                trace_diff[0]['calls'].append(('', key, None))
+                trace_diff[0]['calls'].append((tag, key, None))
                 trace_diff[1]['calls'].append((tag, key, trace[key]))
         else:
             raise ValueError(tag)

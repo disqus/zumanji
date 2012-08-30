@@ -124,7 +124,7 @@
       <div class="tab-pane{% if not changes and trace_results %} active{% endif %}" id="trace">
         <div class="row">
           <div class="span12">
-            <label class="pull-right"><input type="checkbox" name="trace_changed" value="1"> Show only changed calls</label>
+            <label class="pull-right"><input type="checkbox" name="trace_changed" value="1" checked="checked"> Show only changed calls</label>
           </div>
           {% for trace in trace_results.diff %}
           <div class="span6">
@@ -138,7 +138,7 @@
               </caption>
               <tbody>
               {% for tag, call_id, call in trace.calls %}
-                <tr class="{% if tag == 'insert' %} success{% elif tag == 'delete' %} error{% elif tag == 'replace' %} info{% endif %} diff-{{ tag }} call-{{ call_id }}" data-call="{{ call_id }}">
+                <tr class="diff-{{ tag }} call-{{ call_id }}" data-call="{{ call_id }}">
                   {% if call %}
                     <td style="text-align:right; width:50px;">{{ call.interface }}</td>
                     <td>
@@ -222,7 +222,7 @@
         } else {
           $('.diff-equal').show();
         }
-      });
+      }).change();
     }());
     </script>
   {% endif %}
