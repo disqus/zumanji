@@ -41,7 +41,7 @@ def _get_trace_data(test, previous_test=None):
             for key in previous_trace.keys()[i1:i2]:
                 trace_diff[0]['calls'].append((tag, key, previous_trace[key]))
             for key in trace.keys()[j1:j2]:
-                trace_diff[1]['calls'].append((tag, key, previous_trace[key]))
+                trace_diff[1]['calls'].append((tag, key, trace[key]))
         elif tag == 'delete':
             for key in previous_trace.keys()[i1:i2]:
                 trace_diff[0]['calls'].append((tag, key, previous_trace[key]))
@@ -59,7 +59,7 @@ def _get_trace_data(test, previous_test=None):
     return {
         'diff': trace_diff,
         'calls': all_calls,
-        'num_diffs': sum(sum(1 for _, _, c in n['calls'] if c is None) for n in trace_diff),
+        'num_diffs': sum(sum(1 for t, _, c in n['calls'] if t != 'equal') for n in trace_diff),
     }
 
 
