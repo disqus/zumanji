@@ -24,7 +24,6 @@ tests_require = [
 
 install_requires = [
     'django>=1.2',
-    'django-jsonfield',
     'psycopg2',
 ]
 

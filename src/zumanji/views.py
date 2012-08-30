@@ -3,7 +3,6 @@ import itertools
 from collections import defaultdict
 from django.core.urlresolvers import reverse
 from django.shortcuts import render, get_object_or_404
-from django.utils import simplejson
 from django.utils.datastructures import SortedDict
 from zumanji.models import Project, Build, Test, TestData
 
@@ -11,12 +10,6 @@ HISTORICAL_POINTS = 25
 
 
 def _get_trace_data(test, previous_test=None):
-    def make_id(call, callcounts):
-        key = hash((call['interface'], call['command'], call['filename'], call['function']))
-        callcounts[key] += 1
-
-        return '_'.join(map(str, (key, callcounts[key])))
-
     if previous_test:
         try:
             previous_trace = previous_test.testdata_set.get(key='trace').data
@@ -33,11 +26,8 @@ def _get_trace_data(test, previous_test=None):
     if not (trace or previous_trace):
         return {}
 
-    callcounts = defaultdict(int)
-    previous_trace = SortedDict((make_id(c, callcounts), c) for c in previous_trace)
-
-    callcounts = defaultdict(int)
-    trace = SortedDict((make_id(c, callcounts), c) for c in trace)
+    previous_trace = SortedDict(('%s_%s' % (x, c['id']), c) for x, c in enumerate(previous_trace))
+    trace = SortedDict(('%s_%s' % (x, c['id']), c) for x, c in enumerate(trace))
 
     seqmatch = difflib.SequenceMatcher()
     seqmatch.set_seqs(previous_trace.keys(), trace.keys())
@@ -55,10 +45,10 @@ def _get_trace_data(test, previous_test=None):
         elif tag == 'delete':
             for key in previous_trace.keys()[i1:i2]:
                 trace_diff[0]['calls'].append((tag, key, previous_trace[key]))
-                trace_diff[1]['calls'].append((tag, key, None))
+                trace_diff[1]['calls'].append(('', key, None))
         elif tag == 'insert':
             for key in trace.keys()[j1:j2]:
-                trace_diff[0]['calls'].append((tag, key, None))
+                trace_diff[0]['calls'].append(('', key, None))
                 trace_diff[1]['calls'].append((tag, key, trace[key]))
         else:
             raise ValueError(tag)
@@ -86,23 +76,19 @@ def _get_historical_data(build, test_list):
             build__in=previous_builds,
             label__in=[t.label for t in test_list]
         )
-        .values_list('build', 'label', 'mean_duration', 'data')
         .order_by('-build__datetime'))
 
     historical = defaultdict(lambda: defaultdict(str))
-    for build_id, label, duration, data in itertools.chain(previous_tests, (
-        (t.build_id, t.label, t.mean_duration, t.data) for t in test_list)):
-        if isinstance(data, basestring):
-            data = simplejson.loads(data)
-        history_data = [duration]
+    for test in itertools.chain(previous_tests, test_list):
+        history_data = [test.mean_duration]
         for interface in ('redis', 'sql', 'cache'):
-            if interface not in data:
+            if interface not in test.data:
                 history_data.append(0)
             else:
-                interface_duration = data[interface].get('mean_duration', 0)
+                interface_duration = test.data[interface].get('mean_duration', 0)
                 history_data[0] -= interface_duration
                 history_data.append(interface_duration)
-        historical[label][build_id] = history_data
+        historical[test.label][test.build_id] = history_data
 
     results = {}
     for test in test_list:
@@ -258,9 +244,12 @@ def view_test(request, project_label, build_id, test_label):
     else:
         compare_build = previous_test_by_build.build if previous_test_by_build else None
 
-    try:
-        compare_test = compare_build.test_set.get(label=test.label)
-    except Test.DoesNotExist:
+    if compare_build:
+        try:
+            compare_test = compare_build.test_set.get(label=test.label)
+        except Test.DoesNotExist:
+            compare_test = None
+    else:
         compare_test = None
 
     trace_results = _get_trace_data(test, compare_test)

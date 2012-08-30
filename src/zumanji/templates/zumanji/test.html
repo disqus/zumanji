@@ -71,7 +71,7 @@
   {% endif %}
 
   <ul class="nav nav-tabs">
-    <li class="{% if changes and not trace_results %}active{% endif %}"><a href="#changes" data-toggle="tab">Changes ({{ changes|length }})</a></li>
+    <li class="{% if changes or not trace_results %}active{% endif %}"><a href="#changes" data-toggle="tab">Changes ({{ changes|length }})</a></li>
     {% if trace_results %}
       <li class="{% if not changes and trace_results %}active{% endif %}"><a href="#trace" data-toggle="tab">Trace ({{ trace_results.num_diffs }} diffs)</a></li>
     {% endif %}
@@ -92,7 +92,7 @@
     {% endif %}
   </ul>
   <div class="tab-content">
-    <div class="tab-pane{% if changes and not trace_results %} active{% endif %}" id="changes">
+    <div class="tab-pane{% if changes or not trace_results %} active{% endif %}" id="changes">
       {% if changes %}
         <table class="table table-bordered table-striped">
           <thead>
@@ -135,7 +135,7 @@
               </caption>
               <tbody>
               {% for tag, call_id, call in trace.calls %}
-                <tr class="diff-{{ tag }} call-{{ call_id }}" data-call="{{ call_id }}">
+                <tr class="{% if tag == 'insert' %} success{% elif tag == 'delete' %} error{% elif tag == 'replace' %} info{% endif %}" diff-{{ tag }} call-{{ call_id }}" data-call="{{ call_id }}">
                   {% if call %}
                     <td style="text-align:right; width:50px;">{{ call.interface }}</td>
                     <td>
@@ -165,7 +165,7 @@
     <script>
     (function(){
       calls = {{ trace_results.calls|as_json|safe }};
-      $modal = $('<div class="modal hide fade">' + 
+      $modal = $('<div class="modal hide">' + 
         '  <div class="modal-header">' + 
         '    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>' + 
         '    <h3>Call Information</h3>' + 
@@ -177,33 +177,32 @@
         '</div>');
 
       function showStacktrace(call) {
-        $tb = $('<ul class="traceback"></ul>');
-
-                  //     <ol start="{{ frame.start_lineno }}" class="context expandable" id="c{{ forloop.counter0 }}">
-                  //     {% for num, line in frame.context %}
-                  //         <li{% if num == frame.lineno %} class="active"{% else %} class="stack{{ forloop.parentloop.counter0 }} closed"{% endif %} onclick="$('.stack{{ forloop.parentloop.counter0 }}').toggleClass('closed')"><pre>{{ line }}</pre></li>
-                  //     {% endfor %}
-                  //     </ol>
+        var $tb = $('<ul class="traceback"></ul>');
+        
         $.each(call.stacktrace, function(f_index, frame){
           var $frame = $('<li class="frame">' +
             '  <p>' +
-            '    <code>' + frame.name + '</code> in <code>' + frame.function_name + '</code>' +
-            ' at line <code>' + frame.line_number + '</code>' +
+            '    <code>' + frame.filename + '</code> in <code>' + frame.function + '</code>' +
+            ' at line <code>' + frame.lineno + '</code>' +
             '  </p>' +
             '</li>');
-          var $context = $('<ol start=' + frame.code[0][0] + ' class="context expandable"></ol>');
+          if (frame.context.length > 0) {
+            var $context = $('<ol start=' + (frame.context ? frame.context[0][0] : '') + ' class="context expandable"></ol>');
 
-          $.each(frame.code, function(index, bit){
-            $('<li' + (bit[0] == frame.line_number ? ' class="active"': ' class="stack' + f_index + ' closed"') +
-              '  onclick="$(\'.stack' + f_index + '\').toggleClass(\'closed\')"><pre>' + bit[1] + '</pre>' +
-              '</li>').appendTo($context);
-          });
+            $.each(frame.context, function(index, bit){
+              $('<li' + (bit[0] == frame.lineno ? ' class="active"': ' class="stack' + f_index + ' closed"') +
+                '  onclick="$(\'.stack' + f_index + '\').toggleClass(\'closed\')"><pre>' + bit[1] + '</pre>' +
+                '</li>').appendTo($context);
+            });
 
-          $context.appendTo($frame);
+            $context.appendTo($frame);
+          }
+
           $frame.appendTo($tb);
         });
 
-        $modal.find('.modal-body').html($tb);
+        var $body = $modal.find('.modal-body');
+        $tb.appendTo($body);
         $modal.modal();
       }
 

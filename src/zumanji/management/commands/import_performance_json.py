@@ -1,11 +1,16 @@
 import datetime
+import hashlib
 import os.path
 from collections import defaultdict
 from django.db import transaction
 from django.utils import simplejson
 from django.core.management.base import BaseCommand, CommandError
 from optparse import make_option
-from zumanji.models import Project, Revision, Build, Test, TestData
+from zumanji.models import Project, Revision, Build, Test
+
+
+def convert_timestamp(timestamp):
+    return datetime.datetime.strptime(timestamp, '%Y-%m-%dT%H:%M:%S.%f')
 
 
 def count_leaves_with_tests(labels):
@@ -35,7 +40,7 @@ def regroup_tests(tests):
 
 
 def format_data(interface, data):
-    stacktrace = data['stacktrace'][0]
+    frame = data['stacktrace'][0]
 
     if interface == 'sql':
         command = data['query']
@@ -50,15 +55,23 @@ def format_data(interface, data):
         command = data['action']
         args = [data['key']]
     else:
-        command = (stacktrace['name'], stacktrace['function_name'])
+        command = u':'.join(frame['filename'], frame['function'])
         args = []
 
+    call_id = hashlib.md5(interface)
+    call_id.update(command)
+    call_id.update(frame['filename'])
+    call_id.update(frame['function'])
+    call_id = call_id.hexdigest()
+
     return {
+        'id': call_id,
         'interface': interface,
         'command': command,
         'args': args,
-        'function': stacktrace['function_name'],
-        'filename': stacktrace['file_name'],
+        'function': frame['function'],
+        'filename': frame['filename'],
+        'lineno': frame['lineno'],
         'duration': data['duration'],
         'time': data['time'],
         'depth': len(data['stacktrace']),
@@ -88,34 +101,27 @@ def create_test_leaf(build, data, parent):
         extra_data[item['interface']]['mean_calls'] += 1
         extra_data[item['interface']]['mean_duration'] += item['duration']
 
-    test, created = Test.objects.get_or_create(
+    test = Test.objects.create(
         build=build,
+        project=build.project,
+        revision=build.revision,
         label=data['id'],
-        defaults=dict(
-            description=description,
-            mean_duration=data['duration'],
-            upper90_duration=data['duration'],
-            upper_duration=data['duration'],
-            lower_duration=data['duration'],
-            data=extra_data,
-            parent=parent,
-        )
+        description=description,
+        mean_duration=data['duration'],
+        upper90_duration=data['duration'],
+        upper_duration=data['duration'],
+        lower_duration=data['duration'],
+        data=extra_data,
+        parent=parent,
     )
-    if not created:
-        test.parent = parent
-        test.data = extra_data
-        test.save()
 
-    td, created = TestData.objects.get_or_create(
-        test=test,
+    test.testdata_set.create(
+        build=test.build,
+        revision=test.revision,
+        project=test.project,
         key='trace',
-        defaults=dict(
-            data=interface_data,
-        )
+        data=interface_data,
     )
-    if not created and td.data != interface_data:
-        td.data = interface_data
-        td.save()
 
     return test
 
@@ -132,13 +138,16 @@ class Command(BaseCommand):
     @transaction.commit_on_success
     def handle(self, *args, **options):
         for json_file in args:
+
+            self.stdout.write('Reading json file %r\n' % (json_file,))
+
             if not os.path.exists(json_file):
                 raise CommandError('Json file %r does not exist' % json_file)
 
             with open(json_file, 'r') as fp:
                 data = simplejson.loads(fp.read())
 
-            timestamp = datetime.datetime.strptime(data['time'], '%Y-%m-%dT%H:%M:%S.%f')
+            timestamp = convert_timestamp(data['time'])
 
             project_label = options.get('project') or data.get('project')
             assert project_label, 'You must specify a project with --project <label>'
@@ -146,6 +155,7 @@ class Command(BaseCommand):
             revision_label = options.get('revision') or data.get('revision')
             assert revision_label, 'You must specify a revision with --revision <label>'
 
+            # We avoid recreating the core items that might get referenced by an ID in the interface
             project = Project.objects.get_or_create(
                 label=project_label,
             )[0]
@@ -156,6 +166,7 @@ class Command(BaseCommand):
             )[0]
 
             build, created = Build.objects.get_or_create(
+                project=project,
                 revision=revision,
                 datetime=timestamp,
             )
@@ -180,27 +191,32 @@ class Command(BaseCommand):
                     key.pop()
                 return None
 
+            grouped_tests = [(l, t) for l, t in reversed(grouped_tests) if leaf_counts.get(l) >= 1]
+
+            # Create branches
+            branches = []
             for label, tests in grouped_tests:
-                if leaf_counts.get(label) < 1:
-                    continue
+                self.stdout.write('- Creating branch %r\n' % (label,))
 
-                print 'Creating branch', label
-
-                branch = Test.objects.get_or_create(
+                branch = Test(
                     project=project,
                     revision=revision,
                     build=build,
                     label=label,
-                )[0]
+                )
                 tests_by_id[branch.label] = branch
 
-            for label, tests in reversed(grouped_tests):
-                if label not in tests_by_id:
-                    continue
+            build.test_set.all().delete()
+            Test.objects.bulk_create(branches)
 
+            # Create leaves and update branches
+            for label, tests in grouped_tests:
                 branch = tests_by_id[label]
+
+                # Create any leaves which do not exist yet
                 for test_data in (t for t in tests if t['id'] not in tests_by_id):
-                    # parent = find_parent(test_data['id'])
+                    self.stdout.write('- Creating leaf %r\n' % (test_data['id'],))
+
                     test = create_test_leaf(build, test_data, branch)
                     tests_by_id[test.label] = test
 

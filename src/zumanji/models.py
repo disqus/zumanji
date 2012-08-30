@@ -1,21 +1,45 @@
+import base64
 from django.db import models
-from jsonfield import JSONField
+from django.utils import simplejson
 
 
-class TestMixin(object):
-    def is_alert(self):
-        return self.duration >= 1
+class GzippedJSONField(models.TextField):
+    """
+    Slightly different from a JSONField in the sense that the default
+    value is a dictionary.
+    """
+    __metaclass__ = models.SubfieldBase
 
-    def is_warning(self):
-        return self.duration >= 0.5
+    def to_python(self, value):
+        if isinstance(value, basestring) and value:
+            try:
+                value = simplejson.loads(base64.b64decode(value).decode('zlib'))
+            except Exception:
+                return {}
+        elif not value:
+            return {}
+        return value
 
-    def is_starred(self):
-        return self.duration < 0.1
+    def get_prep_value(self, value):
+        if value is None:
+            return
+        return base64.b64encode(simplejson.dumps(value).encode('zlib'))
+
+    def value_to_string(self, obj):
+        value = self._get_val_from_obj(obj)
+        return self.get_prep_value(value)
+
+    def south_field_triple(self):
+        "Returns a suitable description of this field for South."
+        from south.modelsinspector import introspector
+        field_class = "django.db.models.fields.TextField"
+        args, kwargs = introspector(self)
+        return (field_class, args, kwargs)
 
 
 class Project(models.Model):
     label = models.CharField(max_length=64)
-    data = JSONField(default={})
+    data = GzippedJSONField(default={})
 
     def __unicode__(self):
         return self.label
@@ -24,7 +48,7 @@ class Project(models.Model):
 class Revision(models.Model):
     project = models.ForeignKey(Project)
     label = models.CharField(max_length=64)
-    data = JSONField()
+    data = GzippedJSONField(default={})
 
     class Meta:
         unique_together = (('project', 'label'),)
@@ -39,7 +63,7 @@ class Build(models.Model):
     datetime = models.DateTimeField()
     num_tests = models.PositiveIntegerField(default=0)
     total_duration = models.FloatField(default=0.0)
-    data = JSONField(default={})
+    data = GzippedJSONField(default={})
 
     class Meta:
         unique_together = (('revision', 'datetime'),)
@@ -72,7 +96,7 @@ class Build(models.Model):
             return None
 
 
-class Test(models.Model, TestMixin):
+class Test(models.Model):
     project = models.ForeignKey(Project)
     revision = models.ForeignKey(Revision)
     build = models.ForeignKey(Build)
@@ -84,7 +108,7 @@ class Test(models.Model, TestMixin):
     upper_duration = models.FloatField(default=0.0)
     lower_duration = models.FloatField(default=0.0)
     upper90_duration = models.FloatField(default=0.0)
-    data = JSONField(default={})
+    data = GzippedJSONField(default={})
 
     class Meta:
         unique_together = (('build', 'label'),)
@@ -150,8 +174,8 @@ class TestData(models.Model):
     revision = models.ForeignKey(Revision)
     build = models.ForeignKey(Build)
     test = models.ForeignKey(Test)
-    key = models.CharField(max_length=64)
-    data = JSONField(default={})
+    key = models.CharField(max_length=32)
+    data = GzippedJSONField(default={})
 
     class Meta:
         unique_together = (('test', 'key'),)
