@@ -190,12 +190,22 @@ def view_build(request, project_label, build_id):
     for test in test_list:
         test.historical = historical.get(test.id)
 
-    changes = _get_changes(previous_build, test_list)
+    compare_with = request.GET.get('compare_with')
+    if compare_with:
+        try:
+            compare_build = Build.objects.get(project__label=project_label, id=compare_with)
+        except Build.DoesNotExist:
+            compare_build = None
+    else:
+        compare_build = previous_build
+
+    changes = _get_changes(compare_build, test_list)
 
     return render(request, 'zumanji/build.html', {
         'project': project,
         'build': build,
         'previous_build': previous_build,
+        'compare_build': compare_build,
         'next_build': next_build,
         'test_list': test_list,
         'changes': changes,

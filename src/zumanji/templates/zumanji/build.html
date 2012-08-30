@@ -27,7 +27,7 @@
   {% include "zumanji/includes/build_details.html" %}
 
   {% if changes %}
-    <h3>Changes since <a href="{% url zumanji:view_build project_label=previous_build.project.label build_id=previous_build.id %}">#{{ previous_build.id }}</a></h3>
+    <h3>Changes since <a href="{% url zumanji:view_build project_label=compare_build.project.label build_id=compare_build.id %}">#{{ compare_build.id }}</a></h3>
     <table class="table table-bordered table-striped">
       <thead>
         <tr>
@@ -41,7 +41,7 @@
         {% for test, data in changes %}
           <tr>
             <td>
-              <a href="{% url zumanji:view_test project_label=build.project.label build_id=build.id test_label=test.label %}">{{ test.label }}</a>{% if test.num_tests %} <small>({{ test.num_tests }} tests)</small>{% endif %}{% if data.status == 'new' %} <span class="label label-info">New</span>{% endif %}
+              <a href="{% url zumanji:view_test project_label=build.project.label build_id=build.id test_label=test.label %}?compare_with={{ compare_build.id }}">{{ test.label }}</a>{% if test.num_tests %} <small>({{ test.num_tests }} tests)</small>{% endif %}{% if data.status == 'new' %} <span class="label label-info">New</span>{% endif %}
             </td>
             <td style="text-align:center;" class="change-{{ data.interfaces.sql.type }}">{{ data.interfaces.sql.change }}</td>
             <td style="text-align:center;" class="change-{{ data.interfaces.redis.type }}">{{ data.interfaces.redis.change }}</td>
