@@ -78,6 +78,7 @@ class Build(models.Model):
     def get_previous_build(self):
         try:
             return type(self).objects.filter(
+                project=self.project,
                 datetime__lt=self.datetime
             ).exclude(
                 id=self.id,
@@ -88,6 +89,7 @@ class Build(models.Model):
     def get_next_build(self):
         try:
             return type(self).objects.filter(
+                project=self.project,
                 datetime__gt=self.datetime
             ).exclude(
                 id=self.id,
@@ -131,6 +133,7 @@ class Test(models.Model):
     def get_test_in_previous_build(self):
         try:
             return type(self).objects.filter(
+                build__project=self.project,
                 build__datetime__lt=self.build.datetime,
                 label=self.label,
             ).exclude(
@@ -142,6 +145,7 @@ class Test(models.Model):
     def get_test_in_next_build(self):
         try:
             return type(self).objects.filter(
+                build__project=self.project,
                 build__datetime__gt=self.build.datetime,
                 label=self.label,
             ).exclude(
@@ -152,6 +156,7 @@ class Test(models.Model):
 
     def get_previous_builds(self):
         return Build.objects.filter(
+            project=self.project,
             datetime__lt=self.build.datetime,
             test__label=self.label,
         ).exclude(
