@@ -2,7 +2,7 @@
 
 <tr>
   <td>
-    <a href="{% url zumanji:view_test project_label=test.project.label build_id=test.build.id test_label=test.label %}">{{ test.shortlabel }}</a>{% if test.num_tests %} <small>({{ test.num_tests }} tests)</small>{% endif %}
+    <a href="{% url zumanji:view_test project_label=test.project.label build_id=test.build.id test_label=test.label %}?compare_with={{ compare_build.id }}">{{ test.shortlabel }}</a>{% if test.num_tests %} <small>({{ test.num_tests }} tests)</small>{% endif %}
   </td>
   <td style="text-align:center; vertical-align:middle;">
     {% if test.data.cache %}
