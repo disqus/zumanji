@@ -123,6 +123,9 @@
     {% if trace_results %}
       <div class="tab-pane{% if not changes and trace_results %} active{% endif %}" id="trace">
         <div class="row">
+          <div class="span12">
+            <label class="pull-right"><input type="checkbox" name="trace_changed" value="1"> Show only changed calls</label>
+          </div>
           {% for trace in trace_results.diff %}
           <div class="span6">
             <table class="table table-striped trace-diff">
@@ -135,7 +138,7 @@
               </caption>
               <tbody>
               {% for tag, call_id, call in trace.calls %}
-                <tr class="{% if tag == 'insert' %} success{% elif tag == 'delete' %} error{% elif tag == 'replace' %} info{% endif %}" diff-{{ tag }} call-{{ call_id }}" data-call="{{ call_id }}">
+                <tr class="{% if tag == 'insert' %} success{% elif tag == 'delete' %} error{% elif tag == 'replace' %} info{% endif %} diff-{{ tag }} call-{{ call_id }}" data-call="{{ call_id }}">
                   {% if call %}
                     <td style="text-align:right; width:50px;">{{ call.interface }}</td>
                     <td>
@@ -211,6 +214,15 @@
         var call_id = $el.parents('tr').attr('data-call');
         showStacktrace(calls[call_id]);
       }).css('cursor', 'pointer');
+
+      $('input[name="trace_changed"]').change(function(){
+        $el = $(this);
+        if ($el.is(':checked')) {
+          $('.diff-equal').hide();
+        } else {
+          $('.diff-equal').show();
+        }
+      });
     }());
     </script>
   {% endif %}
