@@ -6,21 +6,21 @@
   </td>
   <td style="text-align:center; vertical-align:middle;">
     {% if test.data.cache %}
-        {{ test.data.cache.mean_duration|floatformat:2 }} s<br><small>{{ test.data.cache.mean_calls }} calls</small>
+        {{ test.data.cache.mean_duration|floatformat:2 }}s<br><small>{{ test.data.cache.mean_calls }} calls</small>
     {% else %}
         &mdash;
     {% endif %}
   </td>
   <td style="text-align:center; vertical-align:middle;">
     {% if test.data.redis %}
-        {{ test.data.redis.mean_duration|floatformat:2 }} s<br><small>{{ test.data.redis.mean_calls }} calls</small>
+        {{ test.data.redis.mean_duration|floatformat:2 }}s<br><small>{{ test.data.redis.mean_calls }} calls</small>
     {% else %}
         &mdash;
     {% endif %}
   </td>
   <td style="text-align:center; vertical-align:middle;">
     {% if test.data.sql %}
-        {{ test.data.sql.mean_duration|floatformat:2 }} s<br><small>{{ test.data.sql.mean_calls }} calls</small>
+        {{ test.data.sql.mean_duration|floatformat:2 }}s<br><small>{{ test.data.sql.mean_calls }} calls</small>
     {% else %}
         &mdash;
     {% endif %}
