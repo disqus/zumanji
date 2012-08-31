@@ -167,7 +167,6 @@
   {% if trace_results %}
     <script>
     (function(){
-      {% comment %}
       calls = {{ trace_results.calls|as_json|safe }};
       $modal = $('<div class="modal hide">' + 
         '  <div class="modal-header">' + 
@@ -206,6 +205,8 @@
         });
 
         var $body = $modal.find('.modal-body');
+        $body.empty();
+        $('<pre>' + call.command + ' ' + call.args + '</pre>').appendTo($body);
         $tb.appendTo($body);
         $modal.modal();
       }
@@ -215,7 +216,6 @@
         var call_id = $el.parents('tr').attr('data-call');
         showStacktrace(calls[call_id]);
       }).css('cursor', 'pointer');
-      {% endcomment %}
 
       $('input[name="trace_changed"]').change(function(){
         $el = $(this);
