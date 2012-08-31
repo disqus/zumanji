@@ -171,6 +171,9 @@ class Command(BaseCommand):
                 datetime=timestamp,
             )
 
+            # Clean out old tests
+            build.test_set.all().delete()
+
             num_tests = 0
             total_duration = 0.0
             tests_by_id = {}
@@ -191,14 +194,16 @@ class Command(BaseCommand):
                     key.pop()
                 return None
 
-            grouped_tests = [(l, t) for l, t in reversed(grouped_tests) if leaf_counts.get(l) >= 1]
+            grouped_tests = [(l, t) for l, t in grouped_tests if leaf_counts.get(l) >= 1]
 
             # Create branches
-            branches = []
-            for label, tests in grouped_tests:
+            for label, _ in grouped_tests:
+                parent = find_parent(label)
+
                 self.stdout.write('- Creating branch %r\n' % (label,))
 
-                branch = Test(
+                branch = Test.objects.create(
+                    parent=parent,
                     project=project,
                     revision=revision,
                     build=build,
@@ -206,11 +211,7 @@ class Command(BaseCommand):
                 )
                 tests_by_id[branch.label] = branch
 
-            build.test_set.all().delete()
-            Test.objects.bulk_create(branches)
-
-            # Create leaves and update branches
-            for label, tests in grouped_tests:
+            for label, tests in reversed(grouped_tests):
                 branch = tests_by_id[label]
 
                 # Create any leaves which do not exist yet
@@ -247,10 +248,7 @@ class Command(BaseCommand):
                         'upper90_duration': percentile(durations, 90),
                     }
 
-                parent = find_parent(label)
-
                 tests_by_id[branch.label] = Test.objects.filter(id=branch.id).update(
-                    parent=parent,
                     label=label,
                     num_tests=group_num_tests,
                     mean_duration=group_total_duration,
