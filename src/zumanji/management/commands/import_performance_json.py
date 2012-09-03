@@ -174,6 +174,8 @@ class Command(BaseCommand):
             # Clean out old tests
             build.test_set.all().delete()
 
+            # Clean out old tags
+            build.tags.all().delete()
             # Add tags
             tag_list = [
                 BuildTag.objects.get_or_create(label=tag_name)[0]
