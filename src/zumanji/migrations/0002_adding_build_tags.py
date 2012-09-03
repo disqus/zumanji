@@ -15,10 +15,21 @@ class Migration(SchemaMigration):
         ))
         db.send_create_signal('zumanji', ['BuildTag'])
 
+        # Adding M2M table for field builds on 'BuildTag'
+        db.create_table('zumanji_buildtag_builds', (
+            ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True)),
+            ('buildtag', models.ForeignKey(orm['zumanji.buildtag'], null=False)),
+            ('build', models.ForeignKey(orm['zumanji.build'], null=False))
+        ))
+        db.create_unique('zumanji_buildtag_builds', ['buildtag_id', 'build_id'])
+
 
     def backwards(self, orm):
         # Deleting model 'BuildTag'
         db.delete_table('zumanji_buildtag')
+
+        # Removing M2M table for field builds on 'BuildTag'
+        db.delete_table('zumanji_buildtag_builds')
 
 
     models = {

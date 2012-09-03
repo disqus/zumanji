@@ -103,6 +103,9 @@ class BuildTag(models.Model):
     builds = models.ManyToManyField(Build, related_name='tags')
     label = models.CharField(max_length=255)
 
+    def __unicode__(self):
+        return self.label
+
 
 class Test(models.Model):
     project = models.ForeignKey(Project)
