@@ -4,7 +4,11 @@
   <ul class="pager">
     {% if previous_build %}
       <li class="previous">
-        <a href="{% url zumanji:view_build project_label=previous_build.project.label build_id=previous_build.id %}">&larr; Previous Build (#{{ previous_build.id }})</a>
+        {% if tag %}
+          <a href="{% url zumanji:view_build project_label=previous_build.project.label tag_id=tag.id build_id=previous_build.id %}">&larr; Previous Build (#{{ previous_build.id }})</a>
+        {% else %}
+          <a href="{% url zumanji:view_build project_label=previous_build.project.label build_id=previous_build.id %}">&larr; Previous Build (#{{ previous_build.id }})</a>
+        {% endif %}
       </li>
     {% else %}
       <li class="previous disabled">
@@ -14,7 +18,11 @@
 
     {% if next_build %}
       <li class="next">
-        <a href="{% url zumanji:view_build project_label=next_build.project.label build_id=next_build.id %}">Next Build (#{{ next_build.id }}) &rarr;</a>
+        {% if tag %}
+          <a href="{% url zumanji:view_build project_label=next_build.project.label tag_id=tag.id build_id=next_build.id %}">Next Build (#{{ next_build.id }}) &rarr;</a>
+        {% else %}
+          <a href="{% url zumanji:view_build project_label=next_build.project.label build_id=next_build.id %}">Next Build (#{{ next_build.id }}) &rarr;</a>
+        {% endif %}
       </li>
     {% else %}
       <li class="next disabled">
@@ -22,7 +30,7 @@
       </li>
     {% endif %}
   </ul>
-    
+
   <h3>Build Details</h3>
   {% include "zumanji/includes/build_details.html" %}
 

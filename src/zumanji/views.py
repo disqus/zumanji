@@ -4,7 +4,7 @@ from collections import defaultdict
 from django.core.urlresolvers import reverse
 from django.shortcuts import render, get_object_or_404
 from django.utils.datastructures import SortedDict
-from zumanji.models import Project, Build, Test, TestData
+from zumanji.models import Project, Build, BuildTag, Test, TestData
 
 HISTORICAL_POINTS = 25
 
@@ -176,11 +176,33 @@ def view_project(request, project_label):
     })
 
 
-def view_build(request, project_label, build_id):
-    build = get_object_or_404(Build, project__label=project_label, id=build_id)
+def view_tag(request, project_label, tag_id):
+    project = get_object_or_404(Project, label=project_label)
+    tag = get_object_or_404(BuildTag, pk=tag_id)
+
+    build_list = list(Build.objects
+        .filter(project=project, tags=tag)
+        .order_by('-datetime')
+        .select_related('revision', 'project'))
+
+    return render(request, 'zumanji/tag.html', {
+        'project': project,
+        'tag': tag,
+        'build_list': build_list,
+    })
+
+
+def view_build(request, project_label, build_id, tag_id=None):
+    filter_args = dict(project__label=project_label, id=build_id)
+    tag = None
+    if tag_id:
+        tag = get_object_or_404(BuildTag, id=tag_id)
+        filter_args["tags"] = tag
+
+    build = get_object_or_404(Build, **filter_args)
     project = build.project
-    previous_build = build.get_previous_build()
-    next_build = build.get_next_build()
+    previous_build = build.get_previous_build(tag=tag)
+    next_build = build.get_next_build(tag=tag)
 
     test_list = list(build.test_set
         .filter(parent__isnull=True)
@@ -203,6 +225,7 @@ def view_build(request, project_label, build_id):
 
     return render(request, 'zumanji/build.html', {
         'project': project,
+        'tag': tag,
         'build': build,
         'previous_build': previous_build,
         'compare_build': compare_build,

@@ -75,27 +75,33 @@ class Build(models.Model):
         self.project = self.revision.project
         super(Build, self).save(*args, **kwargs)
 
-    def get_previous_build(self):
+    def _get_temporal_sibling(self, datetime_filter, order_field, tag=None):
+        filter_args = {
+            'project': self.project,
+            datetime_filter: self.datetime
+        }
+        if tag:
+            filter_args["tags"] = tag
+
         try:
             return type(self).objects.filter(
-                project=self.project,
-                datetime__lt=self.datetime
+                **filter_args
             ).exclude(
                 id=self.id,
-            ).order_by('-datetime')[0]
+            ).order_by(order_field)[0]
         except IndexError:
             return None
 
-    def get_next_build(self):
-        try:
-            return type(self).objects.filter(
-                project=self.project,
-                datetime__gt=self.datetime
-            ).exclude(
-                id=self.id,
-            ).order_by('datetime')[0]
-        except IndexError:
-            return None
+    def get_previous_build(self, tag=None):
+        return self._get_temporal_sibling('datetime__lt', "-datetime", tag)
+
+    def get_next_build(self, tag=None):
+        return self._get_temporal_sibling('datetime__gt', "datetime", tag)
+
+
+class BuildTag(models.Model):
+    builds = models.ManyToManyField(Build, related_name='tags')
+    label = models.CharField(max_length=255)
 
 
 class Test(models.Model):

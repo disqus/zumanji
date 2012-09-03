@@ -6,7 +6,7 @@ from django.db import transaction
 from django.utils import simplejson
 from django.core.management.base import BaseCommand, CommandError
 from optparse import make_option
-from zumanji.models import Project, Revision, Build, Test
+from zumanji.models import Project, Revision, Build, BuildTag, Test
 
 
 def convert_timestamp(timestamp):
@@ -173,6 +173,13 @@ class Command(BaseCommand):
 
             # Clean out old tests
             build.test_set.all().delete()
+
+            # Add tags
+            tag_list = [
+                BuildTag.objects.get_or_create(label=tag_name)[0]
+                for tag_name in data.get('tags', [])
+            ]
+            build.tags.add(*tag_list)
 
             num_tests = 0
             total_duration = 0.0
