@@ -3,6 +3,14 @@ from django.db import models
 from django.utils import simplejson
 
 
+RESULT_CHOICES = tuple((k, k) for k in (
+    'success',
+    'failed',
+    'skipped',
+    'deprecated',
+))
+
+
 class GzippedJSONField(models.TextField):
     """
     Slightly different from a JSONField in the sense that the default
@@ -64,6 +72,7 @@ class Build(models.Model):
     num_tests = models.PositiveIntegerField(default=0)
     total_duration = models.FloatField(default=0.0)
     data = GzippedJSONField(default={})
+    result = models.CharField(max_length=16, choices=RESULT_CHOICES, null=True)
 
     class Meta:
         unique_together = (('revision', 'datetime'),)
@@ -120,6 +129,7 @@ class Test(models.Model):
     lower_duration = models.FloatField(default=0.0)
     upper90_duration = models.FloatField(default=0.0)
     data = GzippedJSONField(default={})
+    result = models.CharField(max_length=16, choices=RESULT_CHOICES, null=True)
 
     class Meta:
         unique_together = (('build', 'label'),)
