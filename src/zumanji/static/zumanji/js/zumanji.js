@@ -37,7 +37,7 @@ Sparkline = (function(options){
       }
       output += '<table>';
       output += '<caption>' + options.values[sparkline.currentRegion].title + '</caption>';
-      output += '<tr><th>Total</th><td>' + total + '</td></tr>';
+      output += '<tr><th>Total</th><td>' + floatFormat(total) + '</td></tr>';
       $.each(options.columns, function(_, column){
         output += '<tr><th>' + column + '</th><td>' + floatFormat(fields[_].value) + '</td></th>';
       });
