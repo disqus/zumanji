@@ -155,3 +155,13 @@ LOGGING = {
         },
     }
 }
+
+
+ZUMANJI_CONFIG = {
+    'call_types': (
+        ('sql', 'SQL'),
+        ('redis', 'Redis'),
+        ('cache', 'Cache'),
+        ('template', 'Template'),
+    ),
+}

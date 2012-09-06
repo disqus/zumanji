@@ -1,0 +1,16 @@
+<tr>
+    <td>
+        <a href="{% url zumanji:view_test project_label=test.project.label build_id=test.build_id test_label=test.label %}?compare_with={{ compare_build.id }}">{{ test.shortlabel }}</a>
+        {% if changed_test.num_tests %} <small>({{ changed_test.num_tests }} tests)</small>{% endif %}
+        {% if data.status == 'new' %} <span class="label label-info">New</span>{% endif %}
+    </td>
+    {% for coldata in columns %}
+        <td style="text-align:center; vertical-align:middle;"{% if coldata %} class="change-{{ coldata.0 }}"{% endif %}>
+            {% if coldata %}
+                {{ coldata.1 }}
+            {% else %}
+                &mdash;
+            {% endif %}
+        </td>
+    {% endfor %}
+</tr>

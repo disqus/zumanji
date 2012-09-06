@@ -1,5 +1,7 @@
 {% extends "zumanji/layout.html" %}
 
+{% load zumanji_helpers %}
+
 {% block content %}
   <ul class="pager">
     {% if previous_build %}
@@ -40,21 +42,12 @@
       <thead>
         <tr>
           <th>Test</th>
-          <th style="width:60px; text-align:center;">SQL</th>
-          <th style="width:60px; text-align:center;">Redis</th>
-          <th style="width:60px; text-align:center;">Cache</th>
+          {% render_test_columns %}
         </tr>
       </thead>
       <tbody>
-        {% for test, data in changes %}
-          <tr>
-            <td>
-              <a href="{% url zumanji:view_test project_label=build.project.label build_id=build.id test_label=test.label %}?compare_with={{ compare_build.id }}">{{ test.label }}</a>{% if test.num_tests %} <small>({{ test.num_tests }} tests)</small>{% endif %}{% if data.status == 'new' %} <span class="label label-info">New</span>{% endif %}
-            </td>
-            <td style="text-align:center;" class="change-{{ data.interfaces.sql.type }}">{{ data.interfaces.sql.change }}</td>
-            <td style="text-align:center;" class="change-{{ data.interfaces.redis.type }}">{{ data.interfaces.redis.change }}</td>
-            <td style="text-align:center;" class="change-{{ data.interfaces.cache.type }}">{{ data.interfaces.cache.change }}</td>
-          </tr>
+        {% for change in changes %}
+          {% render_change_row change compare_build %}
         {% endfor %}
       </tbody>
     </table>
@@ -65,15 +58,13 @@
     <thead>
       <tr>
         <th>Test</th>
-        <th style="width:60px; text-align:center;">Cache</th>
-        <th style="width:60px; text-align:center;">Redis</th>
-        <th style="width:60px; text-align:center;">SQL</th>
+        {% render_test_columns %}
         <th style="width:60px; text-align:center;">Duration</th>
       </tr>
     </thead>
     <tbody>
       {% for test in test_list %}
-        {% include "zumanji/includes/test_row.html" %}
+        {% render_test_row test %}
       {% endfor %}
     </tbody>
   </table>
