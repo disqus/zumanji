@@ -1,6 +1,9 @@
 from django import template
 from django.conf import settings
+from django.core.urlresolvers import reverse
 from django.utils import simplejson
+from django.utils.html import mark_safe
+from zumanji.helpers import get_historical_data
 
 register = template.Library()
 
@@ -23,12 +26,33 @@ def range_filter(value):
 
 @register.filter
 def as_json(value):
-    return simplejson.dumps(value)
+    return mark_safe(simplejson.dumps(value))
 
 
-@register.filter
-def get_key(value, key):
-    return value[key]
+@register.inclusion_tag('zumanji/includes/sparkline.html')
+def render_historical_sparkline(test):
+    data = get_historical_data(test.build, [test])[test.id]
+    historical = []
+    for build_id, result in data:
+        if build_id:
+            historical.append({
+                'url': reverse('zumanji:view_test', kwargs={
+                    'project_label': test.project.label,
+                    'build_id': build_id,
+                    'test_label': test.label,
+                }),
+                'title': 'Build #%s' % build_id,
+                'values': result,
+            })
+        else:
+            historical.append({
+                'values': result,
+            })
+    return {
+        'columns': [c[1] for c in settings.ZUMANJI_CONFIG['call_types']],
+        'test': test,
+        'historical': historical,
+    }
 
 
 @register.inclusion_tag('zumanji/includes/test_row.html')

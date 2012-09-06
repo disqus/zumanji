@@ -1,0 +1,14 @@
+{% load zumanji_helpers %}
+
+<div style="text-align:center; margin-bottom:20px;" id="historical-{{ test.id }}">
+    <script>
+    new Sparkline({
+        parent: '#historical-{{ test.id }}',
+        barSpacing: '5px',
+        barWidth: '42px',
+        height: '100px',
+        columns: {{ columns|as_json }},
+        values: {{ historical|as_json }}
+    });
+    </script>
+</div>

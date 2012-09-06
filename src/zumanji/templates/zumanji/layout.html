@@ -11,147 +11,21 @@
 
     <!-- Le styles -->
     <link href="{{ STATIC_URL }}zumanji/css/bootstrap.css" rel="stylesheet">
-    <style>
-      body {
-        padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
-      }
-      blockquote p {
-        margin-bottom: 10px;
-      }
-      footer {
-        background: #f9f9f9;
-        color: #666;
-        font-size: 0.9em;
-        text-align: center;
-        padding: 30px;
-      }
-      footer a {
-        font-weight: bold;
-      }
-      .brand small {
-        color: #999;
-        font-size: 0.7em;
-      }
-      .brand:hover {
-        color: #08C;
-      }
-      .meta {
-        color: #888;
-      }
-      .increase {
-        color: red;
-      }
-      .decrease {
-        color: green;
-      }
-      .jqstooltip {
-        font-size: 0.9em !important;
-      }
-      .jqstooltip table th {
-        text-align: right;
-      }
-      .change-increase {
-        color: red;
-      }
-      .change-decrease {
-        color: green;
-      }
-      .trace-diff {
-      }
-      .trace-diff td div {
-        width: 460px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-      .trace-diff td .indent {
-        display: inline-block;
-        width: 2px;
-      }
-      .diff-delete {
-        color: red;
-      }
-      .diff-insert {
-        color: green;
-      }
-      .diff-replace {
-        color: blue;
-      }
-      ul.traceback {
-        list-style-type: none;
-        margin-left: 0;
-      }
-      ul.traceback li.frame {
-        margin-bottom: 1em;
-        overflow: hidden;
-        position: relative;
-      }
-      ul.traceback code {
-        background: inherit;
-        border: none;
-        color: #000;
-      }
-      ol.context {
-        margin: 0;
-        list-style-position: inside;
-        border: 1px solid #ccc;
-        border: 1px solid rgba(0,0,0,.15);
-        .border-radius(3px);
-      }
-      ol.context li {
-        padding-left: 20px;
-        font-family:monospace;
-        white-space:pre;
-        color:rgba(0,0,0,.75);
-        background-color: #f5f5f5;
-      }
-      ol.context li pre {
-        background-color: inherit;
-        color: rgba(0,0,0,.5);
-        margin: 0;
-        padding: 0;
-        border: 0;
-        display: inline;
-        font-size: 12px;
-        white-space: pre;
-        white-space: pre-wrap;
-        word-wrap: break-word;
-      }
-      ol.context li.active {
-        background-color: #ddd;
-      }
-      ol.context li.active pre {
-        color: #000;
-      }
-      ol.context-line li span {
-        float: right;
-      }
-
-      .expandable {
-        cursor: pointer;
-      }
-      .expandable .closed {
-        height: 0;
-        overflow: hidden;
-      }
-
-      .modal {
-        overflow: none;
-        margin-top: -350px;
-        width: 800px;
-        margin-left: -400px;
-      }
-      .modal-body {
-        max-height: 600px;
-      }
-    </style>
     <link href="{{ STATIC_URL }}zumanji/css/bootstrap-responsive.css" rel="stylesheet">
-    <script>context = {};</script>
+    <link href="{{ STATIC_URL }}zumanji/css/zumanji.css" rel="stylesheet">
 
     <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
     <!--[if lt IE 9]>
       <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
+
+    <script src="{{ STATIC_URL }}zumanji/js/jquery-1.8.0.js"></script>
+    <script src="{{ STATIC_URL }}zumanji/js/bootstrap.js"></script>
+    <script src="{{ STATIC_URL }}zumanji/js/jquery.sparkline.js"></script>
+
+    <script src="{{ STATIC_URL }}zumanji/js/zumanji.js"></script>
+    {% block scripts %}{% endblock %}
+
   </head>
 
   <body>
@@ -181,75 +55,12 @@
 
 
     <footer id="footer">
-        <div class="container">
-            {% block footer %}
-                <a href="https://github.com/disqus/zumanji">Zumanji</a> is Open Source Software | A tribute to <a href="http://twitter.com/zmanji">@zmanji</a>, the greatest <a href="http://code.disqus.com" style="text-decoration:line-through">DISQUS</a> intern ever.
-            {% endblock %}
-        </div>
+      <div class="container">
+        {% block footer %}
+          <a href="https://github.com/disqus/zumanji">Zumanji</a> is Open Source Software | A tribute to <a href="http://twitter.com/zmanji">@zmanji</a>, the greatest <a href="http://code.disqus.com" style="text-decoration:line-through">DISQUS</a> intern ever.
+        {% endblock %}
+      </div>
     </footer>
 
-    <!-- Le javascript
-    ================================================== -->
-    <!-- Placed at the end of the document so the pages load faster -->
-    <script src="{{ STATIC_URL }}zumanji/js/jquery-1.8.0.js"></script>
-    <script src="{{ STATIC_URL }}zumanji/js/bootstrap.js"></script>
-    <script src="{{ STATIC_URL }}zumanji/js/jquery.sparkline.js"></script>
-
-    <script>
-    (function(){
-      var chartRangeMax = 1;
-      // Compute maximum value
-      $('.sparkline').each(function(){
-        var $el = $(this);
-        $.each($el.attr('data-values').split(','), function(_, value){
-          if (value > chartRangeMax) {
-            chartRangeMax = value;
-          }
-        });
-      });
-
-      function floatFormat(value){
-        return Math.round(value*100) / 100;
-      }
-
-      // Render sparklines
-      $('.sparkline').each(function(){
-        var $el = $(this);
-        var values = []
-        $.each($el.attr('data-values').split(','), function(_, value){
-          values.push(value ? value.split('|') : []);
-        });
-
-        $el.sparkline(values, {
-          type: 'bar',
-          width: $el.attr('data-width'),
-          height: $el.attr('data-height'),
-          barColor: '#08C',
-          nullColor: '#999',
-          barWidth: $el.attr('data-bar-width'),
-          barSpacing: $el.attr('data-bar-spacing'),
-          tooltipClassname: 'jqstooltip',
-          tooltipFormatter: function(sparkline, options, fields){
-            if (fields.length != 4) {
-              return '(No data)';
-            }
-            return '<table>'
-              + '<tr><th>Time Spent:</th><td>' + floatFormat(fields[3].value) + '</td></tr>'
-              + '<tr><th>Redis:</th><td>' + floatFormat(fields[2].value) + '</td></tr>'
-              + '<tr><th>SQL:</th><td>' + floatFormat(fields[1].value) + '</td></tr>'
-              + '<tr><th>Cache:</th><td>' + floatFormat(fields[0].value) + '</td></tr>'
-              + '</table>';
-          },
-          colorMap: $.range_map({
-            0: '#08C',
-            '1:': 'red'
-          }),
-          chartRangeMax: 1,
-          chartRangeMin: 0
-        });
-      });
-    }());
-    </script>
-    {% block scripts %}{% endblock %}
   </body>
 </html>
