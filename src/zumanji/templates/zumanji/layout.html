@@ -24,7 +24,6 @@
     <script src="{{ STATIC_URL }}zumanji/js/jquery.sparkline.js"></script>
 
     <script src="{{ STATIC_URL }}zumanji/js/zumanji.js"></script>
-    {% block scripts %}{% endblock %}
 
   </head>
 
@@ -61,6 +60,8 @@
         {% endblock %}
       </div>
     </footer>
+
+    {% block scripts %}{% endblock %}
 
   </body>
 </html>
