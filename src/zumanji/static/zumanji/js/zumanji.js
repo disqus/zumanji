@@ -44,10 +44,10 @@ Sparkline = (function(options){
       output += '</table>';
       return output;
     },
-    colorMap: $.range_map({
-      0: '#08C',
-      '1:': 'red'
-    }),
+    // colorMap: $.range_map({
+    //   0: '#08C',
+    //   '1:': 'red'
+    // }),
     chartRangeMax: 1,
     chartRangeMin: 0
   }).bind('sparklineClick', function(e){
