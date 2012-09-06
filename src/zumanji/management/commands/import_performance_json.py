@@ -39,7 +39,43 @@ def regroup_tests(tests):
     return sorted(grouped.items(), key=lambda x: x[0])
 
 
-def format_data(interface, data):
+def with_call_id(data):
+    call_id = hashlib.md5(data['interface'])
+    call_id.update(data['command'])
+    call_id.update(data['filename'])
+    call_id.update(data['function'])
+    call_id = call_id.hexdigest()
+
+    data['id'] = call_id
+    return data
+
+
+def format_v2_data(data):
+    frame = data['stacktrace'][0]
+
+    data['start'] = float(data['start'])
+    if data.get('end') is not None:
+        data['end'] = float(data['end'])
+        duration = data['end'] - data['start']
+    else:
+        duration = 0.0
+
+    return with_call_id({
+        'interface': data['type'],
+        'command': data['name'],
+        'args': data['args'],
+        'function': frame['function'],
+        'filename': frame['filename'],
+        'lineno': frame['lineno'],
+        'duration': duration,
+        'time': datetime.datetime.fromtimestamp(data['start']).isoformat(),
+        'depth': len(data['stacktrace']),
+        'stacktrace': data['stacktrace'],
+    })
+
+
+def format_v1_data(item):
+    interface, data = item
     frame = data['stacktrace'][0]
 
     if interface == 'sql':
@@ -58,14 +94,7 @@ def format_data(interface, data):
         command = u':'.join(frame['filename'], frame['function'])
         args = []
 
-    call_id = hashlib.md5(interface)
-    call_id.update(command)
-    call_id.update(frame['filename'])
-    call_id.update(frame['function'])
-    call_id = call_id.hexdigest()
-
-    return {
-        'id': call_id,
+    return with_call_id({
         'interface': interface,
         'command': command,
         'args': args,
@@ -76,20 +105,34 @@ def format_data(interface, data):
         'time': data['time'],
         'depth': len(data['stacktrace']),
         'stacktrace': data['stacktrace'],
-    }
+    })
 
 
 def percentile(values, percentile=90):
     return values[int(len(values) * (percentile / 100.0))]
 
 
-def create_test_leaf(build, data, parent):
-    interface_data = []
-    for interface, values in data.get('interfaces', {}).iteritems():
-        for item in values:
-            interface_data.append((interface, item))
+def create_test_leaf(build, data, parent, version=1):
+    if version == 1:
+        format_data = format_v1_data
 
-    interface_data = [format_data(*d) for d in sorted(interface_data, key=lambda x: x[0])]
+        interface_data = []
+        for interface, values in data.get('interfaces', {}).iteritems():
+            for item in values:
+                interface_data.append((interface, item))
+
+        interface_data.sort(key=lambda x: x[0])
+
+    elif version == 2:
+        format_data = format_v2_data
+
+        interface_data = data.get('calls', [])
+        interface_data.sort(key=lambda x: float(x['start']))
+
+    else:
+        raise ValueError('version')
+
+    interface_data = [format_data(d) for d in interface_data]
 
     description = (data.get('doc') or '').strip()
 
@@ -147,6 +190,7 @@ class Command(BaseCommand):
             with open(json_file, 'r') as fp:
                 data = simplejson.loads(fp.read())
 
+            version = int(data.get('version', 1))
             timestamp = convert_timestamp(data['time'])
 
             project_label = options.get('project') or data.get('project')
@@ -227,7 +271,7 @@ class Command(BaseCommand):
                 for test_data in (t for t in tests if t['id'] not in tests_by_id):
                     self.stdout.write('- Creating leaf %r\n' % (test_data['id'],))
 
-                    test = create_test_leaf(build, test_data, branch)
+                    test = create_test_leaf(build, test_data, branch, version)
                     tests_by_id[test.label] = test
 
                     num_tests += 1
