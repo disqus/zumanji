@@ -12,7 +12,7 @@ class Migration(SchemaMigration):
         db.create_table('zumanji_project', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('label', self.gf('django.db.models.fields.CharField')(max_length=64)),
-            ('data', self.gf('jsonfield.fields.JSONField')(default={})),
+            ('data', self.gf('django.db.models.fields.TextField')(default={})),
         ))
         db.send_create_signal('zumanji', ['Project'])
 
@@ -21,7 +21,7 @@ class Migration(SchemaMigration):
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('project', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['zumanji.Project'])),
             ('label', self.gf('django.db.models.fields.CharField')(max_length=64)),
-            ('data', self.gf('jsonfield.fields.JSONField')(default={})),
+            ('data', self.gf('django.db.models.fields.TextField')(default={})),
         ))
         db.send_create_signal('zumanji', ['Revision'])
 
@@ -36,12 +36,28 @@ class Migration(SchemaMigration):
             ('datetime', self.gf('django.db.models.fields.DateTimeField')()),
             ('num_tests', self.gf('django.db.models.fields.PositiveIntegerField')(default=0)),
             ('total_duration', self.gf('django.db.models.fields.FloatField')(default=0.0)),
-            ('data', self.gf('jsonfield.fields.JSONField')(default={})),
+            ('data', self.gf('django.db.models.fields.TextField')(default={})),
+            ('result', self.gf('django.db.models.fields.CharField')(max_length=16, null=True)),
         ))
         db.send_create_signal('zumanji', ['Build'])
 
         # Adding unique constraint on 'Build', fields ['revision', 'datetime']
         db.create_unique('zumanji_build', ['revision_id', 'datetime'])
+
+        # Adding model 'BuildTag'
+        db.create_table('zumanji_buildtag', (
+            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('label', self.gf('django.db.models.fields.CharField')(max_length=255)),
+        ))
+        db.send_create_signal('zumanji', ['BuildTag'])
+
+        # Adding M2M table for field builds on 'BuildTag'
+        db.create_table('zumanji_buildtag_builds', (
+            ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True)),
+            ('buildtag', models.ForeignKey(orm['zumanji.buildtag'], null=False)),
+            ('build', models.ForeignKey(orm['zumanji.build'], null=False))
+        ))
+        db.create_unique('zumanji_buildtag_builds', ['buildtag_id', 'build_id'])
 
         # Adding model 'Test'
         db.create_table('zumanji_test', (
@@ -57,7 +73,8 @@ class Migration(SchemaMigration):
             ('upper_duration', self.gf('django.db.models.fields.FloatField')(default=0.0)),
             ('lower_duration', self.gf('django.db.models.fields.FloatField')(default=0.0)),
             ('upper90_duration', self.gf('django.db.models.fields.FloatField')(default=0.0)),
-            ('data', self.gf('jsonfield.fields.JSONField')(default={})),
+            ('data', self.gf('django.db.models.fields.TextField')(default={})),
+            ('result', self.gf('django.db.models.fields.CharField')(max_length=16, null=True)),
         ))
         db.send_create_signal('zumanji', ['Test'])
 
@@ -71,8 +88,8 @@ class Migration(SchemaMigration):
             ('revision', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['zumanji.Revision'])),
             ('build', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['zumanji.Build'])),
             ('test', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['zumanji.Test'])),
-            ('key', self.gf('django.db.models.fields.CharField')(max_length=64)),
-            ('data', self.gf('jsonfield.fields.JSONField')(default={})),
+            ('key', self.gf('django.db.models.fields.CharField')(max_length=32)),
+            ('data', self.gf('django.db.models.fields.TextField')(default={})),
         ))
         db.send_create_signal('zumanji', ['TestData'])
 
@@ -102,6 +119,12 @@ class Migration(SchemaMigration):
         # Deleting model 'Build'
         db.delete_table('zumanji_build')
 
+        # Deleting model 'BuildTag'
+        db.delete_table('zumanji_buildtag')
+
+        # Removing M2M table for field builds on 'BuildTag'
+        db.delete_table('zumanji_buildtag_builds')
+
         # Deleting model 'Test'
         db.delete_table('zumanji_test')
 
@@ -112,23 +135,30 @@ class Migration(SchemaMigration):
     models = {
         'zumanji.build': {
             'Meta': {'unique_together': "(('revision', 'datetime'),)", 'object_name': 'Build'},
-            'data': ('jsonfield.fields.JSONField', [], {'default': '{}'}),
+            'data': ('django.db.models.fields.TextField', [], {'default': '{}'}),
             'datetime': ('django.db.models.fields.DateTimeField', [], {}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'num_tests': ('django.db.models.fields.PositiveIntegerField', [], {'default': '0'}),
             'project': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['zumanji.Project']"}),
+            'result': ('django.db.models.fields.CharField', [], {'max_length': '16', 'null': 'True'}),
             'revision': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['zumanji.Revision']"}),
             'total_duration': ('django.db.models.fields.FloatField', [], {'default': '0.0'})
         },
+        'zumanji.buildtag': {
+            'Meta': {'object_name': 'BuildTag'},
+            'builds': ('django.db.models.fields.related.ManyToManyField', [], {'related_name': "'tags'", 'symmetrical': 'False', 'to': "orm['zumanji.Build']"}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'label': ('django.db.models.fields.CharField', [], {'max_length': '255'})
+        },
         'zumanji.project': {
             'Meta': {'object_name': 'Project'},
-            'data': ('jsonfield.fields.JSONField', [], {'default': '{}'}),
+            'data': ('django.db.models.fields.TextField', [], {'default': '{}'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'label': ('django.db.models.fields.CharField', [], {'max_length': '64'})
         },
         'zumanji.revision': {
             'Meta': {'unique_together': "(('project', 'label'),)", 'object_name': 'Revision'},
-            'data': ('jsonfield.fields.JSONField', [], {'default': '{}'}),
+            'data': ('django.db.models.fields.TextField', [], {'default': '{}'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'label': ('django.db.models.fields.CharField', [], {'max_length': '64'}),
             'project': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['zumanji.Project']"})
@@ -136,7 +166,7 @@ class Migration(SchemaMigration):
         'zumanji.test': {
             'Meta': {'unique_together': "(('build', 'label'),)", 'object_name': 'Test'},
             'build': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['zumanji.Build']"}),
-            'data': ('jsonfield.fields.JSONField', [], {'default': '{}'}),
+            'data': ('django.db.models.fields.TextField', [], {'default': '{}'}),
             'description': ('django.db.models.fields.TextField', [], {'null': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'label': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
@@ -145,6 +175,7 @@ class Migration(SchemaMigration):
             'num_tests': ('django.db.models.fields.PositiveIntegerField', [], {'default': '0'}),
             'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['zumanji.Test']", 'null': 'True'}),
             'project': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['zumanji.Project']"}),
+            'result': ('django.db.models.fields.CharField', [], {'max_length': '16', 'null': 'True'}),
             'revision': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['zumanji.Revision']"}),
             'upper90_duration': ('django.db.models.fields.FloatField', [], {'default': '0.0'}),
             'upper_duration': ('django.db.models.fields.FloatField', [], {'default': '0.0'})
@@ -152,9 +183,9 @@ class Migration(SchemaMigration):
         'zumanji.testdata': {
             'Meta': {'unique_together': "(('test', 'key'),)", 'object_name': 'TestData'},
             'build': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['zumanji.Build']"}),
-            'data': ('jsonfield.fields.JSONField', [], {'default': '{}'}),
+            'data': ('django.db.models.fields.TextField', [], {'default': '{}'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'key': ('django.db.models.fields.CharField', [], {'max_length': '64'}),
+            'key': ('django.db.models.fields.CharField', [], {'max_length': '32'}),
             'project': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['zumanji.Project']"}),
             'revision': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['zumanji.Revision']"}),
             'test': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['zumanji.Test']"})
