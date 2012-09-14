@@ -47,7 +47,7 @@ class GzippedJSONField(models.TextField):
 
 class Project(models.Model):
     label = models.CharField(max_length=64)
-    data = GzippedJSONField(default={})
+    data = GzippedJSONField(default={}, blank=True)
 
     def __unicode__(self):
         return self.label
@@ -56,7 +56,7 @@ class Project(models.Model):
 class Revision(models.Model):
     project = models.ForeignKey(Project)
     label = models.CharField(max_length=64)
-    data = GzippedJSONField(default={})
+    data = GzippedJSONField(default={}, blank=True)
 
     class Meta:
         unique_together = (('project', 'label'),)
@@ -71,7 +71,7 @@ class Build(models.Model):
     datetime = models.DateTimeField()
     num_tests = models.PositiveIntegerField(default=0)
     total_duration = models.FloatField(default=0.0)
-    data = GzippedJSONField(default={})
+    data = GzippedJSONField(default={}, blank=True)
     result = models.CharField(max_length=16, choices=RESULT_CHOICES, null=True)
 
     class Meta:
@@ -128,7 +128,7 @@ class Test(models.Model):
     upper_duration = models.FloatField(default=0.0)
     lower_duration = models.FloatField(default=0.0)
     upper90_duration = models.FloatField(default=0.0)
-    data = GzippedJSONField(default={})
+    data = GzippedJSONField(default={}, blank=True)
     result = models.CharField(max_length=16, choices=RESULT_CHOICES, null=True)
 
     class Meta:
@@ -199,7 +199,7 @@ class TestData(models.Model):
     build = models.ForeignKey(Build)
     test = models.ForeignKey(Test)
     key = models.CharField(max_length=32)
-    data = GzippedJSONField(default={})
+    data = GzippedJSONField(default={}, blank=True)
 
     class Meta:
         unique_together = (('test', 'key'),)
