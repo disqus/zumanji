@@ -14,7 +14,7 @@ from setuptools import setup, find_packages
 # setup.py test` (see
 # http://www.eby-sarna.com/pipermail/peak/2010-May/003357.html)
 try:
-    import multiprocessing
+    __import__('multiprocessing')
 except ImportError:
     pass
 
@@ -25,6 +25,8 @@ tests_require = [
 install_requires = [
     'django>=1.2',
     'psycopg2',
+    'django-crispy-forms>=1.1.4',
+    'south',
 ]
 
 setup(

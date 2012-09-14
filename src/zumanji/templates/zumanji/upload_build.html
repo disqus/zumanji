@@ -1,0 +1,16 @@
+{% extends "zumanji/layout.html" %}
+
+{% load crispy_forms_tags %}
+{% load i18n %}
+
+{% block content %}
+  <h3>Upload Build for {{ project.label }}</h3>
+  <form action="" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form|crispy }}
+
+    <fieldset class="form-actions">
+        <button type="submit" class="btn btn-primary">{% trans "Upload Build" %}</button>
+    </fieldset>
+  </form>
+{% endblock %}

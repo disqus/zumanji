@@ -1,7 +1,11 @@
 from django.core.urlresolvers import reverse
+from django.http import HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
-from zumanji.models import Project, Build, BuildTag, Test
+from django.utils import simplejson
+from zumanji.forms import UploadJsonForm
 from zumanji.helpers import get_trace_data, get_changes
+from zumanji.models import Project, Build, BuildTag, Test
+from zumanji.importer import import_build
 
 
 def index(request):
@@ -149,4 +153,25 @@ def view_test(request, project_label, build_id, test_label):
         'changes': changes,
         'compare_build': compare_build,
         'trace_results': trace_results,
+    })
+
+
+def upload_project_build(request, project_label):
+    project = get_object_or_404(Project, label=project_label)
+
+    form = UploadJsonForm(request.POST or None, request.FILES or None)
+    if form.is_valid():
+        data = simplejson.loads(request.FILES['json_file'].read())
+
+        try:
+            build = import_build(data, project=project.label, revision=form.cleaned_data.get('revision'))
+        except Exception, e:
+            form.errors['json_file'] = unicode(e)
+        else:
+            return HttpResponseRedirect(reverse('zumanji:view_build', kwargs={
+                'project_label': project.label, 'build_id': build.id}))
+
+    return render(request, 'zumanji/upload_build.html', {
+        'project': project,
+        'form': form,
     })
