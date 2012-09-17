@@ -46,7 +46,7 @@ class GzippedJSONField(models.TextField):
 
 
 class Project(models.Model):
-    label = models.CharField(max_length=64)
+    label = models.CharField(max_length=64, unique=True)
     data = GzippedJSONField(default={}, blank=True)
 
     def __unicode__(self):
