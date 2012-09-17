@@ -3,7 +3,7 @@ from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect, HttpResponseForbidden
 from django.shortcuts import render, get_object_or_404
 from django.utils import simplejson
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_protect, csrf_exempt
 from functools import wraps
 from zumanji.forms import UploadJsonForm
 from zumanji.helpers import get_trace_data, get_changes
@@ -20,9 +20,9 @@ def api_auth(func):
         if request.REQUEST.get('api_key'):
             if request.REQUEST['api_key'] != settings.ZUMANJI_CONFIG.get('API_KEY', NOTSET):
                 return HttpResponseForbidden('Invalid api_key')
-            return csrf_exempt(func)(request, *args, **kwargs)
-        return func(request, *args, **kwargs)
-    return wrapped
+            return func(request, *args, **kwargs)
+        return csrf_protect(func)(request, *args, **kwargs)
+    return csrf_exempt(wrapped)
 
 
 def index(request):

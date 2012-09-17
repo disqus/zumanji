@@ -19,6 +19,9 @@ except ImportError:
     pass
 
 tests_require = [
+    'django-nose',
+    'mock',
+    'nose',
 ]
 
 
