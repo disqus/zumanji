@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.core.urlresolvers import reverse
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponseForbidden
 from django.shortcuts import render, get_object_or_404
 from django.utils import simplejson
 from django.views.decorators.csrf import csrf_exempt
@@ -17,7 +17,9 @@ NOTSET = object()
 def api_auth(func):
     @wraps(func)
     def wrapped(request, *args, **kwargs):
-        if request.GET.get('api_key') == settings.ZUMANJI_CONFIG.get('API_KEY', NOTSET):
+        if request.REQUEST.get('api_key'):
+            if request.REQUEST['api_key'] != settings.ZUMANJI_CONFIG.get('API_KEY', NOTSET):
+                return HttpResponseForbidden('Invalid api_key')
             return csrf_exempt(func)(request, *args, **kwargs)
         return func(request, *args, **kwargs)
     return wrapped
