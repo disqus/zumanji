@@ -1,11 +1,26 @@
+from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
 from django.utils import simplejson
+from django.views.decorators.csrf import csrf_exempt
+from functools import wraps
 from zumanji.forms import UploadJsonForm
 from zumanji.helpers import get_trace_data, get_changes
 from zumanji.models import Project, Build, BuildTag, Test
 from zumanji.importer import import_build
+
+
+NOTSET = object()
+
+
+def api_auth(func):
+    @wraps(func)
+    def wrapped(request, *args, **kwargs):
+        if request.GET.get('api_key') == settings.ZUMANJI_CONFIG.get('API_KEY', NOTSET):
+            return csrf_exempt(func)(request, *args, **kwargs)
+        return func(request, *args, **kwargs)
+    return wrapped
 
 
 def index(request):
@@ -156,6 +171,7 @@ def view_test(request, project_label, build_id, test_label):
     })
 
 
+@api_auth
 def upload_project_build(request, project_label):
     project = get_object_or_404(Project, label=project_label)
 
