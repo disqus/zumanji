@@ -39,8 +39,8 @@ def regroup_tests(tests):
 def with_call_id(data):
     call_id = hashlib.md5(data['interface'])
     call_id.update(data['command'])
-    call_id.update(data['filename'])
-    call_id.update(data['function'])
+    call_id.update(data.get('filename') or '')
+    call_id.update(data.get('function') or '')
     call_id = call_id.hexdigest()
 
     data['id'] = call_id
@@ -48,7 +48,10 @@ def with_call_id(data):
 
 
 def format_v2_data(data):
-    frame = data['stacktrace'][0]
+    if data.get('stacktrace'):
+        frame = data['stacktrace'][0]
+    else:
+        frame = {}
 
     data['start'] = float(data['start'])
     if data.get('end') is not None:
@@ -61,9 +64,9 @@ def format_v2_data(data):
         'interface': data['type'],
         'command': data['name'],
         'args': data['args'],
-        'function': frame['function'],
-        'filename': frame['filename'],
-        'lineno': frame['lineno'],
+        'function': frame.get('function'),
+        'filename': frame.get('filename'),
+        'lineno': frame.get('lineno'),
         'duration': duration,
         'time': datetime.datetime.fromtimestamp(data['start']).isoformat(),
         'depth': len(data['stacktrace']),
