@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.core.urlresolvers import reverse
+from django.db import transaction
 from django.http import HttpResponseRedirect, HttpResponseForbidden
 from django.shortcuts import render, get_object_or_404
 from django.utils import simplejson
@@ -174,6 +175,7 @@ def view_test(request, project_label, build_id, test_label):
 
 
 @api_auth
+@transaction.commit_on_success
 def upload_project_build(request, project_label):
     project = get_object_or_404(Project, label=project_label)
 
