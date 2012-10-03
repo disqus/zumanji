@@ -1800,7 +1800,6 @@
                     this.colorMapByValue = new RangeMap(this.colorMapByValue);
                 }
             }
-
             this.range = range;
         },
 

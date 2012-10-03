@@ -41,6 +41,7 @@ footer a {
   max-width: 200px;
   padding: 8px;
   color: #ffffff;
+  min-width: 200px;
   text-align: center;
   text-decoration: none;
   background-color: #000000;
@@ -49,25 +50,61 @@ footer a {
           border-radius: 4px;
 
 }
-.sparktooltip caption {
+.sparktooltip h4 {
   font-weight: bold;
   color: orange;
+  margin: 0;
+  font-size: 1.2em;
+}
+.sparktooltip ul {
+  list-style: none;
+  margin: 0;
 }
 
-.sparktooltip table {
-  border-spacing: none;
-}
-.sparktooltip table th,
-.sparktooltip table td {
+.legend {
+  position: absolute;
+  background: #fff;
+  line-height: 1;
   padding: 3px;
-  line-height: 1em;
+  margin: 0;
+  list-style: none;
 }
-.sparktooltip table th {
-  text-align: right;
+.legend li {
+  display: inline-block;
+  margin-right: 8px;
 }
-.sparktooltip table td {
-  text-align: left;
+.legend span {
+  width: 10px;
+  height: 10px;
+  display: inline-block;
 }
+
+.progressbar {
+    font-size: 0.8em;
+    padding: 1px;
+    line-height: 1.5em;
+    height: 1.5em;
+    overflow: hidden;
+    position: relative;
+    display: block;
+    font-weight: bold;
+}
+.progressbar div {
+    background: #343434;
+    height: 100%;
+    display: block;
+}
+.progressbar span {
+    display: block;
+    text-align: left;
+    position: absolute;
+    padding: 0 5px;
+    left: 1px;
+    right: 1px;
+    top: 1px;
+    bottom: 1px;
+}
+
 .change-increase {
   color: red;
 }
