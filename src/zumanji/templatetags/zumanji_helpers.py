@@ -8,6 +8,12 @@ from zumanji.helpers import get_historical_data
 register = template.Library()
 
 
+@register.simple_tag
+def zumanji_version():
+    import zumanji
+    return zumanji.VERSION
+
+
 @register.filter
 def format_historical(data):
     result = []

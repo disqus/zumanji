@@ -1,4 +1,4 @@
-
+{% load zumanji_helpers %}
 
 <!DOCTYPE html>
 <html lang="en">
@@ -56,7 +56,7 @@
     <footer id="footer">
       <div class="container">
         {% block footer %}
-          <a href="https://github.com/disqus/zumanji">Zumanji</a> is Open Source Software | A tribute to <a href="http://twitter.com/zmanji">@zmanji</a>, the greatest <a href="http://code.disqus.com" style="text-decoration:line-through">DISQUS</a> intern ever.
+          Zumanji {% zumanji_version %} | <a href="https://github.com/disqus/zumanji">Zumanji</a> is Open Source Software | A tribute to <a href="http://twitter.com/zmanji">@zmanji</a>, the greatest <a href="http://code.disqus.com" style="text-decoration:line-through">DISQUS</a> intern ever.
         {% endblock %}
       </div>
     </footer>
