@@ -11,10 +11,14 @@
   <dd>{{ build.num_tests }}</dd>
   <dt>Datetime</dt>
   <dd>{{ build.datetime }}</dd>
-  <dt>Tags</dt>
-  <dd>
-    {% for tag in build.tags.all %}
-      <a href="{% url zumanji:view_tag project_label=build.project.label, tag_id=tag.id %}">{{ tag.label }}</a>{% if not forloop.last %}, {% endif %}
-    {% endfor %}
-  </dd>
+  {% with build.tags.all as tags %}
+    {% if tags %}
+      <dt>Tags</dt>
+      <dd>
+        {% for tag in tags %}
+          <a href="{% url zumanji:view_tag project_label=build.project.label, tag_id=tag.id %}">{{ tag.label }}</a>{% if not forloop.last %}, {% endif %}
+        {% endfor %}
+      </dd>
+    {% endif %}
+  {% endwith %}
 </dl>
