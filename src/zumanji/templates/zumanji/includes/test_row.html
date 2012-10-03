@@ -7,7 +7,7 @@
   {% for coldata in columns %}
     <td style="text-align:center; vertical-align:middle;">
       {% if coldata %}
-          {{ coldata.0|floatformat:2 }}s<br><small>{{ coldata.1 }} calls</small>
+          {{ coldata.1 }} calls<br><small>{{ coldata.0|floatformat:2 }}s</small>
       {% else %}
           &mdash;
       {% endif %}

@@ -48,6 +48,7 @@ def render_historical_sparkline(test):
             historical.append({
                 'values': result,
             })
+
     return {
         'columns': [c[1] for c in settings.ZUMANJI_CONFIG['call_types']],
         'test': test,

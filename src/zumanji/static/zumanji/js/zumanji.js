@@ -27,19 +27,14 @@ Sparkline = (function(options){
     tooltipClassname: 'sparktooltip',
     tooltipFormatter: function(sparkline, _, fields){
       var output = '';
-      var total = 0;
-      $.each(fields, function(_, f){
-        total += floatFormat(f.value);
-      });
 
       if (fields.length === 0) {
         return '(No data)';
       }
       output += '<table>';
       output += '<caption>' + options.values[sparkline.currentRegion].title + '</caption>';
-      output += '<tr><th>Total</th><td>' + floatFormat(total) + '</td></tr>';
       $.each(options.columns, function(_, column){
-        output += '<tr><th>' + column + '</th><td>' + floatFormat(fields[_ + 1].value) + '</td></th>';
+        output += '<tr><th>' + column + '</th><td>' + floatFormat(fields[_].value) + '</td></th>';
       });
       output += '</table>';
       return output;

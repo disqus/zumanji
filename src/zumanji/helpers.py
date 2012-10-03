@@ -79,14 +79,13 @@ def get_historical_data(build, test_list):
 
     historical = defaultdict(lambda: defaultdict(list))
     for test in itertools.chain(previous_tests, test_list):
-        history_data = [test.mean_duration]
+        history_data = []
         for interface, _ in settings.ZUMANJI_CONFIG['call_types']:
             if interface not in test.data:
                 history_data.append(0)
             else:
-                interface_duration = test.data[interface].get('mean_duration', 0)
-                history_data[0] -= interface_duration
-                history_data.append(interface_duration)
+                interface_calls = test.data[interface].get('mean_calls')
+                history_data.append(interface_calls)
         historical[test.label][test.build_id] = history_data
 
     padding = [(None, [])] * HISTORICAL_POINTS
