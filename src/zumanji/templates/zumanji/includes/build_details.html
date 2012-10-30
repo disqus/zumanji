@@ -4,7 +4,7 @@
   <dt>Project</dt>
   <dd><a href="{% url zumanji:view_project project_label=build.project.label %}">{{ build.project.label }}</a></dd>
   <dt>Revision</dt>
-  <dd>{{ build.revision.label }}</dd>
+  <dd>{{ build.revision.label }}{% if build.revision.data %} [<a href="{{ build.revision.details_url }}">git</a>]<br>{{ build.revision.long_label }}{% endif %}</dd>
   <dt>Duration:</dt>
   <dd>{{ build.total_duration|floatformat:3 }}s</dd>
   <dt>Tests:</dt>

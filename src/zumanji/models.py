@@ -1,7 +1,11 @@
 import base64
+import logging
+import re
 from django.db import models
 from django.utils import simplejson
+from zumanji.github import github
 
+REVISION_RE = re.compile(r'^[A-Za-z0-9]{40}$')
 
 RESULT_CHOICES = tuple((k, k) for k in (
     'success',
@@ -9,6 +13,10 @@ RESULT_CHOICES = tuple((k, k) for k in (
     'skipped',
     'deprecated',
 ))
+
+
+def is_revision(value):
+    return REVISION_RE.match(value)
 
 
 class GzippedJSONField(models.TextField):
@@ -63,6 +71,34 @@ class Revision(models.Model):
 
     def __unicode__(self):
         return self.label
+
+    def save(self, *args, **kwargs):
+        if is_revision(self.label) and '/' in self.project.label and not self.data:
+            try:
+                details = github.get_commit(self.project, self.label)
+            except:
+                logger = logging.getLogger('github')
+                logger.exception('Failed to get revision details')
+            else:
+                self.data.update(details)
+        super(Revision, self).save(*args, **kwargs)
+
+    def long_label(self):
+        if not self.data:
+            return self.label
+
+        return "%(oneline)s (%(author)s, +%(added)s/-%(removed)s)" % dict(
+            oneline=self.data['commit']['message'].split("\n")[0],
+            author=self.data['commit']['author']['name'],
+            added=self.data['stats']['additions'],
+            removed=self.data['stats']['deletions'],
+        )
+
+    def details_url(self):
+        if not self.data:
+            return
+
+        return github.get_commit_url(self.project.label, self.label)
 
 
 class Build(models.Model):
