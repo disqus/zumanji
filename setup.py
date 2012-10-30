@@ -29,6 +29,7 @@ install_requires = [
     'django>=1.2',
     'django-crispy-forms>=1.1.4',
     'psycopg2',
+    'python-dateutil',
     'requests',
     'south',
 ]

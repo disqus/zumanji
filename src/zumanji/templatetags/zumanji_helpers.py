@@ -1,3 +1,4 @@
+import dateutil.parser
 from django import template
 from django.conf import settings
 from django.core.urlresolvers import reverse
@@ -23,6 +24,16 @@ def format_historical(data):
         else:
             result.append('')
     return ','.join(result)
+
+
+@register.filter
+def oneline(value):
+    return value.split("\n")[0]
+
+
+@register.filter
+def date_from_iso(value):
+    return dateutil.parser.parse(value)
 
 
 @register.filter('range')

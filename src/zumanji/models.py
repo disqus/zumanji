@@ -80,7 +80,11 @@ class Revision(models.Model):
                 logger = logging.getLogger('github')
                 logger.exception('Failed to get revision details')
             else:
-                self.data.update(details)
+                self.data = {
+                    'commit': details['commit'],
+                    'stats': details['stats'],
+                    'files': [{'filename': f['filename']} for f in details['files']],
+                }
         super(Revision, self).save(*args, **kwargs)
 
     def long_label(self):
