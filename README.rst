@@ -1,18 +1,21 @@
 Zumanji
 =======
 
-A web application for handling performance test results.
+A web application for handling performance test results with heavy GitHub integration.
 
 Integrates with `nose-performance <https://github.com/disqus/nose-performance>`_ to report and archive results.
 
 See the included application in ``example/`` for information a sample setup.
+
+.. note:: Zumanji is designed to work with GitHub, and will likely explode into a million little errors if your repo
+          does not exist on GitHub.
 
 Usage
 -----
 
 Import JSON data from your test runner::
 
-    $ python manage.py import_performance_json <json file> --project=disqus-web
+    $ python manage.py import_performance_json <json file> --project=disqus/gargoyle
 
 Goals
 -----

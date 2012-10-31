@@ -71,6 +71,9 @@
     {% if trace_results %}
       <li class="{% if not changes and trace_results %}active{% endif %}"><a href="#trace" data-toggle="tab">Trace ({{ trace_results.num_diffs }} diffs)</a></li>
     {% endif %}
+    {% if compare_build %}
+      <li><a href="#git-log" data-toggle="tab">Git Log</a></li>
+    {% endif %}
     {% if previous_builds %}
       <li class="pull-right dropdown">
         <a class="dropdown-toggle" data-toggle="dropdown" href="#">
@@ -80,7 +83,10 @@
         <ul class="dropdown-menu">
           <li>
             {% for b in previous_builds %}
-              <li{% if compare_build == b %} class="active"{% endif %}><a href="?compare_with={{ b.id }}">#{{ b.id }} - {{ b.revision.label }}</a></li>
+              <li{% if compare_build == b %} class="active"{% endif %}>
+                <a href="?compare_with={{ b.id }}"><strong>#{{ b.id }} &mdash; {{ b.revision.label }}</strong><br>
+                <small>{{ b.revision.author.name }} &mdash; {{ b.revision.oneline }}</small></a>
+              </li>
             {% endfor %}
           </li>
         </ul>
@@ -146,8 +152,25 @@
         </div>
       </div>
     {% endif %}
-
+    {% if compare_build %}
+      <div class="tab-pane" id="git-log">
+        <p>Showing diff for <strong><a href="{{ build.revision.details_url }}">{{ build.revision.label }}</a></strong> ... <strong><a href="{{ compare_build.revision.details_url }}">{{ compare_build.revision.label }}</a></strong>
+        <ul class="git-log">
+          {% for revision in git_changes %}
+            <li>
+              <img src="{% gravatar_for_email revision.author.email %}" alt="avatar" class="avatar">
+              <a href="{{ revision.details_url }}">{{ revision.oneline }}</a>
+              {% if revision.summary %}
+                <blockquote>{{ revision.summary }}</blockquote>
+              {% endif %}<br>
+              <div class="author">{{ revision.author.name }} authored {{ revision.author.datetime|date_from_iso|timesince }} ago</div>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
   </div>
+  <br>
 {% endblock %}
 
 {% block scripts %}

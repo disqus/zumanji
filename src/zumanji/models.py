@@ -1,11 +1,10 @@
 import base64
-import logging
-import re
+import dateutil.parser
 from django.db import models
+from django.db.models import Q
 from django.utils import simplejson
 from zumanji.github import github
 
-REVISION_RE = re.compile(r'^[A-Za-z0-9]{40}$')
 
 RESULT_CHOICES = tuple((k, k) for k in (
     'success',
@@ -13,10 +12,6 @@ RESULT_CHOICES = tuple((k, k) for k in (
     'skipped',
     'deprecated',
 ))
-
-
-def is_revision(value):
-    return REVISION_RE.match(value)
 
 
 class GzippedJSONField(models.TextField):
@@ -60,10 +55,25 @@ class Project(models.Model):
     def __unicode__(self):
         return self.label
 
+    def save(self, *args, **kwargs):
+        assert '/' in self.label, 'Label must in format of user/repo (GitHub-esque)'
+
+        return super(Project, self).save(*args, **kwargs)
+
+    @property
+    def github_user(self):
+        return self.label.split('/', 1)[0]
+
+    @property
+    def github_repo(self):
+        return self.label.split('/', 1)[1]
+
 
 class Revision(models.Model):
     project = models.ForeignKey(Project)
     label = models.CharField(max_length=64)
+    datetime = models.DateTimeField(null=True)
+    parent = models.ForeignKey('self', null=True)
     data = GzippedJSONField(default={}, blank=True)
 
     class Meta:
@@ -72,37 +82,57 @@ class Revision(models.Model):
     def __unicode__(self):
         return self.label
 
-    def save(self, *args, **kwargs):
-        if is_revision(self.label) and '/' in self.project.label and not self.data:
-            try:
-                details = github.get_commit(self.project, self.label)
-            except:
-                logger = logging.getLogger('github')
-                logger.exception('Failed to get revision details')
+    @classmethod
+    def sanitize_github_data(cls, data):
+        return {
+            'commit': data['commit'],
+            'stats': data['stats'],
+            'files': [{'filename': f['filename']} for f in data['files']],
+        }
+
+    @classmethod
+    def get_or_create(cls, project, label):
+        """
+        Get a revision, and if it doesnt exist, attempt to pull it from Git.
+        """
+        try:
+            rev = cls.objects.get(project=project, label=label)
+        except Revision.DoesNotExist:
+            data = github.get_commit(project.github_user, project.github_repo, label)
+
+            datetime = dateutil.parser.parse(data['commit']['committer']['date'])
+            # LOL MULTIPLE PARENTS HOW DOES GIT WORK
+            # (dont care about the merge commits parent for our system)
+            if data.get('parents'):
+                parent = cls.get_or_create(project, data['parents'][0]['sha'])
             else:
-                self.data = {
-                    'commit': details['commit'],
-                    'stats': details['stats'],
-                    'files': [{'filename': f['filename']} for f in details['files']],
-                }
-        super(Revision, self).save(*args, **kwargs)
+                parent = None
 
-    def long_label(self):
-        if not self.data:
-            return self.label
+            return cls.objects.create(
+                project=project,
+                label=label,
+                datetime=datetime,
+                parent=parent,
+                data=cls.sanitize_github_data(data),
+            )
 
-        return "%(oneline)s (%(author)s, +%(added)s/-%(removed)s)" % dict(
-            oneline=self.data['commit']['message'].split("\n")[0],
-            author=self.data['commit']['author']['name'],
-            added=self.data['stats']['additions'],
-            removed=self.data['stats']['deletions'],
-        )
+        return rev
 
+    @property
     def details_url(self):
-        if not self.data:
-            return
+        return github.get_commit_url(self.project.github_user, self.project.github_repo, self.label)
 
-        return github.get_commit_url(self.project.label, self.label)
+    @property
+    def oneline(self):
+        return self.data['commit']['message'].split('\n', 1)[0]
+
+    @property
+    def summary(self):
+        return '\n'.join(self.data['commit']['message'].split('\n', 1)[1:])
+
+    @property
+    def author(self):
+        return self.data['commit']['author']
 
 
 class Build(models.Model):
@@ -124,28 +154,33 @@ class Build(models.Model):
         self.project = self.revision.project
         super(Build, self).save(*args, **kwargs)
 
-    def _get_temporal_sibling(self, datetime_filter, order_field, tag=None):
+    def _get_temporal_sibling(self, datetime_filter, order_field, tag=None, previous=False):
         filter_args = {
             'project': self.project,
-            datetime_filter: self.datetime
+            # datetime_filter: self.revision.datetime
         }
         if tag:
             filter_args["tags"] = tag
 
+        qs = type(self).objects.filter(**filter_args)
+
+        if previous:
+            qs = qs.filter(Q(revision=self.revision.parent) | Q(revision__isnull=True))
+        else:
+            qs = qs.filter(revision__parent=self.revision)
+
         try:
-            return type(self).objects.filter(
-                **filter_args
-            ).exclude(
+            return qs.exclude(
                 id=self.id,
-            ).order_by(order_field)[0]
+            ).select_related('revision').order_by(order_field)[0]
         except IndexError:
             return None
 
     def get_previous_build(self, tag=None):
-        return self._get_temporal_sibling('datetime__lt', "-datetime", tag)
+        return self._get_temporal_sibling('revision__datetime__lt', "-revision__datetime", tag, previous=True)
 
     def get_next_build(self, tag=None):
-        return self._get_temporal_sibling('datetime__gt', "datetime", tag)
+        return self._get_temporal_sibling('revision__datetime__gt', "revision__datetime", tag)
 
 
 class BuildTag(models.Model):
@@ -193,11 +228,12 @@ class Test(models.Model):
         try:
             return type(self).objects.filter(
                 build__project=self.project,
-                build__datetime__lt=self.build.datetime,
+                build__revision__datetime__lt=self.revision.datetime,
+                build__revision=self.revision.parent,
                 label=self.label,
             ).exclude(
                 build=self.build,
-            ).order_by('-build__datetime')[0]
+            ).order_by('-build__revision__datetime')[0]
         except IndexError:
             return None
 
@@ -205,22 +241,25 @@ class Test(models.Model):
         try:
             return type(self).objects.filter(
                 build__project=self.project,
-                build__datetime__gt=self.build.datetime,
+                build__revision__datetime__gt=self.revision.datetime,
+                build__revision__parent=self.revision,
                 label=self.label,
             ).exclude(
                 build=self.build,
-            ).order_by('build__datetime')[0]
+            ).order_by('build__revision__datetime')[0]
         except IndexError:
             return None
 
-    def get_previous_builds(self):
-        return Build.objects.filter(
-            project=self.project,
-            datetime__lt=self.build.datetime,
-            test__label=self.label,
-        ).exclude(
-            id=self.build.id,
-        ).order_by('-datetime')
+    def get_previous_builds(self, limit=50):
+        build = self.build
+        builds = []
+        for x in xrange(limit):
+            previous_build = build.get_previous_build()
+            if previous_build is None:
+                break
+            builds.append(previous_build)
+            build = previous_build
+        return builds
 
     def get_context(self):
         # O(N), so dont abuse it

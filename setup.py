@@ -28,6 +28,7 @@ tests_require = [
 install_requires = [
     'django>=1.2',
     'django-crispy-forms>=1.1.4',
+    'django-gravatar',
     'psycopg2',
     'python-dateutil',
     'requests',

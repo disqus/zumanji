@@ -7,10 +7,6 @@
       <dd><a href="{% url zumanji:view_build project_label=build.project.label build_id=build.id %}">#{{ build.id }}</a></dd>
       <dt>Project</dt>
       <dd><a href="{% url zumanji:view_project project_label=build.project.label %}">{{ build.project.label }}</a></dd>
-      {% if not build.revision.data %}
-        <dt>Revision</dt>
-        <dd>{{ build.revision.label }}{% if build.revision.data %} [<a href="{{ build.revision.details_url }}">git</a>]{% endif %}</dd>
-      {% endif %}
       <dt>Duration:</dt>
       <dd>{{ build.total_duration|floatformat:3 }}s</dd>
       <dt>Tests:</dt>
@@ -29,20 +25,18 @@
       {% endwith %}
     </dl>
   </div>
-  {% if build.revision.data %}
-    <div class="span6">
-      <dl class="dl-horizontal">
-        <dt>Revision</dt>
-        <dd>{{ build.revision.label }}{% if build.revision.data %} [<a href="{{ build.revision.details_url }}">git</a>]{% endif %}</dd>
-        <dt>Author</dt>
-        <dd>{{ build.revision.data.commit.author.name }} ({{ build.revision.data.commit.author.email }})</dd>
-        <dt>Changes</dt>
-        <dd>+{{ build.revision.data.stats.additions }} / -{{ build.revision.data.stats.deletions }} ({{ build.revision.data.files|length }} file{% if build.revision.data.files|length != 1 %}s{% endif %})</dd>
-        <dt>Datetime</dt>
-        <dd>{{ build.revision.data.commit.author.date|date_from_iso }}</dd>
-        <dt>Message</dt>
-        <dd>{{ build.revision.data.commit.message|oneline }}</dd>
-      </dl>
-    </div>
-  {% endif %}
+  <div class="span6">
+    <dl class="dl-horizontal">
+      <dt>Revision</dt>
+      <dd>{{ build.revision.label }}{% if build.revision.data %} [<a href="{{ build.revision.details_url }}">git</a>]{% endif %}</dd>
+      <dt>Author</dt>
+      <dd>{{ build.revision.data.commit.author.name }} ({{ build.revision.data.commit.author.email }})</dd>
+      <dt>Changes</dt>
+      <dd>+{{ build.revision.data.stats.additions }} / -{{ build.revision.data.stats.deletions }} ({{ build.revision.data.files|length }} file{% if build.revision.data.files|length != 1 %}s{% endif %})</dd>
+      <dt>Datetime</dt>
+      <dd>{{ build.revision.data.commit.author.date|date_from_iso }}</dd>
+      <dt>Message</dt>
+      <dd>{{ build.revision.data.commit.message|oneline }}</dd>
+    </dl>
+  </div>
 </div>

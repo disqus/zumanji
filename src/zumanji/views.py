@@ -7,7 +7,7 @@ from django.utils import simplejson
 from django.views.decorators.csrf import csrf_protect, csrf_exempt
 from functools import wraps
 from zumanji.forms import UploadJsonForm
-from zumanji.helpers import get_trace_data, get_changes
+from zumanji.helpers import get_trace_data, get_changes, get_git_changes
 from zumanji.models import Project, Build, BuildTag, Test
 from zumanji.importer import import_build
 
@@ -28,7 +28,7 @@ def api_auth(func):
 
 def index(request):
     build_list = list(Build.objects
-        .order_by('-datetime')
+        .order_by('-revision__datetime')
         .select_related('revision', 'project'))
 
     return render(request, 'zumanji/index.html', {
@@ -133,7 +133,7 @@ def view_test(request, project_label, build_id, test_label):
         )
         last = node.label + '.'  # include the dot
 
-    previous_builds = list(test.get_previous_builds().select_related('revision')[:50])
+    previous_builds = test.get_previous_builds(50)
 
     compare_with = request.GET.get('compare_with')
     if compare_with:
@@ -149,8 +149,11 @@ def view_test(request, project_label, build_id, test_label):
             compare_test = compare_build.test_set.get(label=test.label)
         except Test.DoesNotExist:
             compare_test = None
+
+        git_changes = get_git_changes(build, compare_build)
     else:
         compare_test = None
+        git_changes = None
 
     trace_results = get_trace_data(test, compare_test)
     if previous_test_by_build:
@@ -171,6 +174,7 @@ def view_test(request, project_label, build_id, test_label):
         'changes': changes,
         'compare_build': compare_build,
         'trace_results': trace_results,
+        'git_changes': git_changes,
     })
 
 

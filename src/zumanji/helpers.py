@@ -1,11 +1,23 @@
 import difflib
 import itertools
+import re
 from collections import defaultdict
 from django.conf import settings
 from django.utils.datastructures import SortedDict
-from zumanji.models import Build, Test, TestData
+from zumanji.github import github
+from zumanji.models import Build, Revision, Test, TestData
 
 HISTORICAL_POINTS = 25
+
+REVISION_RE = re.compile(r'^[A-Za-z0-9]{40}$')
+
+
+def is_revision(value):
+    return REVISION_RE.match(value)
+
+
+def is_github_revision(project, value):
+    return is_revision(value) and '/' in project.label
 
 
 def get_trace_data(test, previous_test=None):
@@ -63,13 +75,14 @@ def get_trace_data(test, previous_test=None):
 
 
 def get_historical_data(build, test_list):
-    previous_builds = list(Build.objects.filter(
-        datetime__lt=build.datetime,
-        project=build.project,
-    ).exclude(
-        id=build.id,
-    ).order_by('-datetime')
-     .values_list('id', flat=True)[:HISTORICAL_POINTS - 1][::-1])
+    previous_builds = []
+    cur_build = build
+    for point in xrange(HISTORICAL_POINTS):
+        prev_build = cur_build.get_previous_build()
+        if prev_build is None:
+            break
+        previous_builds.insert(0, prev_build.id)
+        cur_build = prev_build
 
     previous_tests = list(Test.objects.filter(
         build__in=previous_builds,
@@ -150,3 +163,15 @@ def get_changes(previous_build, objects):
     return sorted(changes.iteritems(),
         key=lambda x: sum(int(i['change']) for i in x[1]['interfaces'].values()),
         reverse=True)
+
+
+def get_git_changes(build, previous_build):
+    project = build.project
+
+    results = github.compare_commits(project.github_user, project.github_repo,
+        previous_build.revision.label, build.revision.label)
+    commits = []
+    for commit in results['commits']:
+        revision = Revision.get_or_create(build.project, commit['sha'])
+        commits.append(revision)
+    return commits

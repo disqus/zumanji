@@ -8,6 +8,8 @@ from zumanji.helpers import get_historical_data
 
 register = template.Library()
 
+from gravatar.templatetags.gravatar import *
+
 
 @register.simple_tag
 def zumanji_version():

@@ -202,3 +202,34 @@ ol.context-line li span {
 .modal-body {
   max-height: 600px;
 }
+
+.git-log {
+  margin-bottom: 20px;
+}
+.git-log li {
+  position: relative;
+  margin-left: 0;
+  list-style-type: none;
+  padding-left: 50px;
+  min-height: 40px;
+  margin-bottom: 10px;
+}
+.git-log li .avatar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+}
+.git-log li blockquote {
+  display: none;
+}
+.git-log li a {
+  font-weight: bold;
+  color: #000;
+}
+.git-log li .author {
+  font-size: 0.9em;
+  color: #666;
+}
