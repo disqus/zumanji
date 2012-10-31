@@ -159,4 +159,4 @@ ZUMANJI_CONFIG = {
 }
 
 # curlish -u "dcramer" -X POST https://api.github.com/authorizations -J "scopes=repo"
-GITHUB_ACCESS_TOKEN = '2c10e8997a87a7aae80dbfe43761ba4e51e50949'
+GITHUB_ACCESS_TOKEN = None
