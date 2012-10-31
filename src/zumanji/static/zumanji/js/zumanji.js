@@ -89,3 +89,7 @@ Sparkline = (function(options){
 
   $el.prepend($legend);
 });
+
+$(function(){
+  $('a[rel=tooltip]').tooltip();
+});

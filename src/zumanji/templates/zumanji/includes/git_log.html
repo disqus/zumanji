@@ -1,0 +1,15 @@
+{% load zumanji_helpers %}
+
+<p>Showing diff for <strong><a href="{{ build.revision.details_url }}">{{ build.revision.label }}</a></strong> ... <strong><a href="{{ compare_build.revision.details_url }}">{{ compare_build.revision.label }}</a></strong>
+<ul class="git-log">
+  {% for revision in git_changes %}
+    <li>
+      <img src="{% gravatar_for_email revision.author.email %}" alt="avatar" class="avatar">
+      <a href="{{ revision.details_url }}">{{ revision.oneline }}</a>
+      {% if revision.summary %}
+        <blockquote>{{ revision.summary }}</blockquote>
+      {% endif %}<br>
+      <div class="author">{{ revision.author.name }} authored {{ revision.author.datetime|date_from_iso|timesince }} ago</div>
+    </li>
+  {% endfor %}
+</ul>

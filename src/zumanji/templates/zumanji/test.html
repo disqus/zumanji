@@ -6,7 +6,7 @@
   <ul class="pager">
     {% if previous_test_by_build %}
       <li class="previous">
-        <a href="{% url zumanji:view_test project_label=previous_test_by_build.project.label build_id=previous_test_by_build.build_id test_label=previous_test_by_build.label %}">&larr; Previous Build (#{{ previous_test_by_build.build_id }})</a>
+        <a href="{% url zumanji:view_test project_label=previous_test_by_build.project.label build_id=previous_test_by_build.build_id test_label=previous_test_by_build.label %}" title="{{ previous_test_by_build.revision.oneline }} &mdash; {{ previous_test_by_build.revision.author.name }}" rel="tooltip">&larr; Previous Build (#{{ previous_test_by_build.build_id }} &mdash; {{ previous_test_by_build.revision.label }})</a>
       </li>
     {% else %}
       <li class="previous disabled">
@@ -16,7 +16,7 @@
 
     {% if next_test_by_build %}
       <li class="next">
-        <a href="{% url zumanji:view_test project_label=next_test_by_build.project.label build_id=next_test_by_build.build_id test_label=next_test_by_build.label %}">Next Build (#{{ next_test_by_build.build_id }}) &rarr;</a>
+        <a href="{% url zumanji:view_test project_label=next_test_by_build.project.label build_id=next_test_by_build.build_id test_label=next_test_by_build.label %}" title="{{ next_test_by_build.revision.oneline }} &mdash; {{ next_test_by_build.revision.author.name }}" rel="tooltip">Next Build (#{{ next_test_by_build.build_id }} &mdash; {{ next_test_by_build.revision.label }}) &rarr;</a>
       </li>
     {% else %}
       <li class="next disabled">
@@ -57,22 +57,29 @@
 
   {% if not test_list %}
     {# Must be a leaf #}
-    <h4>Build Details</h4>
-    {% include "zumanji/includes/build_details.html" %}
+    <section class="section">
+      <h3>Build Details</h3>
+      {% include "zumanji/includes/build_details.html" %}
+    </section>
   {% endif %}
 
   {% if test.description %}
-    <h4>Description</h4>
-    <blockquote>{{ test.description|linebreaks }}</blockquote>
+    <section class="section">
+      <h3>Description</h3>
+      <blockquote>{{ test.description|linebreaks }}</blockquote>
+    </section>
+  {% endif %}
+
+  {% if git_changes %}
+    <section class="section">
+      {% include "zumanji/includes/git_log.html" %}
+    </section>
   {% endif %}
 
   <ul class="nav nav-tabs">
     <li class="{% if changes or not trace_results %}active{% endif %}"><a href="#changes" data-toggle="tab">Changes ({{ changes|length }})</a></li>
     {% if trace_results %}
       <li class="{% if not changes and trace_results %}active{% endif %}"><a href="#trace" data-toggle="tab">Trace ({{ trace_results.num_diffs }} diffs)</a></li>
-    {% endif %}
-    {% if compare_build %}
-      <li><a href="#git-log" data-toggle="tab">Git Log</a></li>
     {% endif %}
     {% if previous_builds %}
       <li class="pull-right dropdown">
@@ -150,23 +157,6 @@
           </div>
           {% endfor %}
         </div>
-      </div>
-    {% endif %}
-    {% if compare_build %}
-      <div class="tab-pane" id="git-log">
-        <p>Showing diff for <strong><a href="{{ build.revision.details_url }}">{{ build.revision.label }}</a></strong> ... <strong><a href="{{ compare_build.revision.details_url }}">{{ compare_build.revision.label }}</a></strong>
-        <ul class="git-log">
-          {% for revision in git_changes %}
-            <li>
-              <img src="{% gravatar_for_email revision.author.email %}" alt="avatar" class="avatar">
-              <a href="{{ revision.details_url }}">{{ revision.oneline }}</a>
-              {% if revision.summary %}
-                <blockquote>{{ revision.summary }}</blockquote>
-              {% endif %}<br>
-              <div class="author">{{ revision.author.name }} authored {{ revision.author.datetime|date_from_iso|timesince }} ago</div>
-            </li>
-          {% endfor %}
-        </ul>
       </div>
     {% endif %}
   </div>

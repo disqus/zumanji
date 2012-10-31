@@ -29,29 +29,32 @@
 
   <body>
 
-    <div class="navbar navbar-fixed-top">
-      <div class="navbar-inner">
-        <div class="container">
-          <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </a>
-          <a class="brand" href="{% url zumanji:index %}">Zumanji <small>Performance Tests</small></a>
-          <div class="nav-collapse collapse">
-            <ul class="nav">
-              <li><a href="{% url zumanji:index %}">Home</a></li>
-            </ul>
-          </div><!--/.nav-collapse -->
+    <section id="navbar">
+      <div class="navbar navbar-fixed-top">
+        <div class="navbar-inner">
+          <div class="container">
+            <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+            </a>
+            <a class="brand" href="{% url zumanji:index %}">Zumanji <small>Performance Tests</small></a>
+            <div class="nav-collapse collapse">
+              <ul class="nav">
+                <li><a href="{% url zumanji:index %}">Home</a></li>
+              </ul>
+            </div><!--/.nav-collapse -->
+          </div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div class="container">
-      {% block content %}
-      {% endblock %}
-    </div> <!-- /container -->
-
+    <section id="content">
+      <div class="container">
+        {% block content %}
+        {% endblock %}
+      </div> <!-- /container -->
+    </section>
 
     <footer id="footer">
       <div class="container">

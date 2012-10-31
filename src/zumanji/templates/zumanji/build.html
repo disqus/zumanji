@@ -7,10 +7,11 @@
     {% if previous_build %}
       <li class="previous">
         {% if tag %}
-          <a href="{% url zumanji:view_build project_label=previous_build.project.label tag_id=tag.id build_id=previous_build.id %}">&larr; Previous Build (#{{ previous_build.id }})</a>
+          {% url 'zumanji:view_build' project_label=previous_build.project.label tag_id=tag.id build_id=previous_build.id as previous_build_link %}
         {% else %}
-          <a href="{% url zumanji:view_build project_label=previous_build.project.label build_id=previous_build.id %}">&larr; Previous Build (#{{ previous_build.id }})</a>
+          {% url 'zumanji:view_build' project_label=previous_build.project.label build_id=previous_build.id as previous_build_link %}
         {% endif %}
+        <a href="{{ previous_build_link }}" title="{{ previous_build.revision.oneline }} &mdash; {{ previous_build.revision.author.name }}" rel="tooltip">&larr; Previous Build <small>#{{ previous_build.id }} &mdash; {{ previous_build.revision.label }}</small></a>
       </li>
     {% else %}
       <li class="previous disabled">
@@ -21,51 +22,65 @@
     {% if next_build %}
       <li class="next">
         {% if tag %}
-          <a href="{% url zumanji:view_build project_label=next_build.project.label tag_id=tag.id build_id=next_build.id %}">Next Build (#{{ next_build.id }}) &rarr;</a>
+          {% url 'zumanji:view_build' project_label=next_build.project.label tag_id=tag.id build_id=next_build.id as next_build_link %}
         {% else %}
-          <a href="{% url zumanji:view_build project_label=next_build.project.label build_id=next_build.id %}">Next Build (#{{ next_build.id }}) &rarr;</a>
+          {% url 'zumanji:view_build' project_label=next_build.project.label build_id=next_build.id as next_build_link %}
         {% endif %}
+        <a href="{{ next_build_link }}" title="{{ next_build.revision.oneline }} &mdash; {{ next_build.revision.author.name }}" rel="tooltip">Next Build <small>#{{ next_build.id }} &mdash; {{ next_build.revision.label }}</small> &rarr;</a>
       </li>
     {% else %}
       <li class="next disabled">
-        <a href="#">Next Build &rarr;</a>
+        <a href="#">Next Build</a>
       </li>
     {% endif %}
   </ul>
 
-  <h3>Build Details</h3>
+  <div class="page-header">
+    <h2>Build Details</h2>
+  </div>
   {% include "zumanji/includes/build_details.html" %}
 
   {% if changes %}
-    <h3>Changes since <a href="{% url zumanji:view_build project_label=compare_build.project.label build_id=compare_build.id %}">#{{ compare_build.id }}</a></h3>
-    <table class="table table-bordered table-striped">
+    <section class="section">
+      <h3>Changes since <a href="{% url zumanji:view_build project_label=compare_build.project.label build_id=compare_build.id %}">#{{ compare_build.id }}</a></h3>
+      <table class="table table-bordered table-striped">
+        <thead>
+          <tr>
+            <th>Test</th>
+            {% render_test_columns %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for change in changes %}
+            {% render_change_row change compare_build %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  {% endif %}
+
+  {% if git_changes %}
+    <section class="section">
+      <h3>Git Log</h3>
+      {% include "zumanji/includes/git_log.html" %}
+    </section>
+  {% endif %}
+
+  <section class="section">
+    <h3>Test Results</h3>
+    <table class="table table-striped table-bordered">
       <thead>
         <tr>
           <th>Test</th>
           {% render_test_columns %}
+          <th style="width:60px; text-align:center;">Duration</th>
         </tr>
       </thead>
       <tbody>
-        {% for change in changes %}
-          {% render_change_row change compare_build %}
+        {% for test in test_list %}
+          {% render_test_row test %}
         {% endfor %}
       </tbody>
     </table>
-  {% endif %}
-
-  <h3>Test Results</h3>
-  <table class="table table-striped table-bordered">
-    <thead>
-      <tr>
-        <th>Test</th>
-        {% render_test_columns %}
-        <th style="width:60px; text-align:center;">Duration</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for test in test_list %}
-        {% render_test_row test %}
-      {% endfor %}
-    </tbody>
-  </table>
+  </section>
 {% endblock %}
