@@ -18,7 +18,7 @@ admin.site.register(Revision, RevisionAdmin)
 
 
 class BuildAdmin(admin.ModelAdmin):
-    list_display = ('label', 'project', 'revision', 'num_tests', 'result', 'datetime')
+    list_display = ('id', 'revision', 'num_tests', 'result', 'datetime')
     list_filter = ('datetime', 'project', 'result')
     search_fields = ('label', 'project__label', 'revision__label')
     raw_id_fields = ('revision',)
