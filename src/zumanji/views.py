@@ -27,12 +27,18 @@ def api_auth(func):
 
 
 def index(request):
-    build_list = list(Build.objects
-        .order_by('-revision__datetime')
-        .select_related('revision', 'project'))
+    build_qs = Build.objects.order_by('-revision__datetime').select_related('revision')
+    project_list = []
+    # lol O(N)
+    for project in Project.objects.all():
+        try:
+            latest_build = build_qs.filter(project=project)[0]
+        except IndexError:
+            latest_build = None
+        project_list.append((project, latest_build))
 
     return render(request, 'zumanji/index.html', {
-        'build_list': build_list,
+        'project_list': project_list,
     })
 
 
@@ -41,7 +47,7 @@ def view_project(request, project_label):
 
     build_list = list(Build.objects
         .filter(project=project)
-        .order_by('-datetime')
+        .order_by('-revision__datetime')
         .select_related('revision', 'project'))
 
     return render(request, 'zumanji/project.html', {

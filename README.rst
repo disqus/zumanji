@@ -41,3 +41,9 @@ Individual Test
 ~~~~~~~~~~~~~~~
 
 .. image:: https://github.com/disqus/zumanji/raw/master/screenshots/leaf.png
+
+
+Caveats
+-------
+
+This is still an evolving prototype and APIs are not stable, nor is the implementation the most efficient it could be.

@@ -260,3 +260,13 @@ ol.context-line li span {
 section.section {
   margin-bottom: 40px;
 }
+
+.project-list {
+  list-style: none;
+  margin-left: 0;
+  margin-bottom: 20px;
+}
+.project-list li {
+  margin-left: 0;
+  margin-bottom: 10px;
+}

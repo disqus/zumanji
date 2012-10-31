@@ -1,33 +1,44 @@
 {% extends "zumanji/layout.html" %}
 
+{% load zumanji_helpers %}
+
 {% block content %}
-  <h3>Latest Builds for {{ project.label }}</h3>
+  <h3>Latest Builds <small>{{ project.label }}</small></h3>
   <table class="table table-striped table-bordered">
     <thead>
       <tr>
-        <th style="width:60px; text-align:right;">ID</th>
         <th>Revision</th>
-        <th style="width:180px;">Datetime</th>
-        <th style="width:180px;">Tags</th>
-        <th style="width:100px; text-align:center;">Tests</th>
-        <th style="width:100px; text-align:center;">Duration</th>
+        <th style="width:180px;text-align:center;">Datetime</th>
+        <th style="width:180px;text-align:center;">Tags</th>
+        <th style="width:80px;text-align:center;">Tests</th>
       </tr>
     </thead>
     <tbody>
       {% for build in build_list %}
         <tr>
-          <td style="text-align:right;"><a href="{% url zumanji:view_build project_label=build.project.label, build_id=build.id %}">B{{ build.id }}</a></td>
-          <td>{{ build.revision.label }}</td>
-          <td>{{ build.datetime }}</td>
-          <td>
-            {% for tag in build.tags.all %}
-              <a href="{% url zumanji:view_tag project_label=build.project.label, tag_id=tag.id %}">{{ tag.label }}</a>{% if not forloop.last %}, {% endif %}
-            {% endfor %}
+          <td style="vertical-align:middle;">
+            <a href="{% url zumanji:view_build project_label=build.project.label, build_id=build.id %}">#{{ build.id }} &mdash; {{ build.revision.label }}</a><br>
+            <small>{{ build.revision.oneline }} &mdash; {{ build.revision.author.name }}</small>
           </td>
-          <td style="text-align:center;">{{ build.num_tests }}</td>
-          <td style="text-align:center;">{{ build.total_duration|floatformat:3 }} s</td>
+          <td style="vertical-align:middle;text-align:center;">
+            {{ build.datetime|timesince }}<br>
+            <small>{{ build.datetime }}</small>
+          </td>
+          <td style="text-align:center;vertical-align:middle;">
+            {% with build.tags.all as tags %}
+              {% if tags %}
+                {% for tag in build.tags.all %}
+                  <a href="{% url zumanji:view_tag project_label=build.project.label, tag_id=tag.id %}">{{ tag.label }}</a>{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+              {% else %}
+                &mdash;
+              {% endif %}
+            {% endwith %}
+          </td>
+          <td style="text-align:center;vertical-align:middle;">{{ build.num_tests }}</td>
         </tr>
       {% endfor %}
     </tbody>
   </table>
+  <p><small>Note: Builds are ordered by revision commit date.</small></p>
 {% endblock %}

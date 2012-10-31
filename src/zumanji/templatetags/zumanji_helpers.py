@@ -1,9 +1,11 @@
 import dateutil.parser
+from datetime import timedelta
 from django import template
 from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.utils import simplejson
 from django.utils.html import mark_safe
+from django.utils.translation import ugettext as _
 from zumanji.helpers import get_historical_data
 
 register = template.Library()
@@ -116,3 +118,21 @@ def render_change_row(change, compare_build):
         'columns': columns,
         'compare_build': compare_build,
     }
+
+
+@register.filter
+def timesince(value, now=None):
+    from django.template.defaultfilters import timesince
+    from django.utils import timezone
+    if now is None:
+        now = timezone.now()
+    if not value:
+        return _('never')
+    if value < (now - timedelta(days=5)):
+        return value.date()
+    value = (' '.join(timesince(value, now).split(' ')[0:2])).strip(',')
+    if value == _('0 minutes'):
+        return _('just now')
+    if value == _('1 day'):
+        return _('yesterday')
+    return value + _(' ago')
