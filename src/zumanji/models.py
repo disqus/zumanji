@@ -90,6 +90,21 @@ class Revision(models.Model):
             'files': [{'filename': f['filename']} for f in data['files']],
         }
 
+    def update_from_github(self):
+        data = github.get_commit(self.project.github_user, self.project.github_repo, self.label)
+
+        datetime = dateutil.parser.parse(data['commit']['committer']['date'])
+        # LOL MULTIPLE PARENTS HOW DOES GIT WORK
+        # (dont care about the merge commits parent for our system)
+        if data.get('parents'):
+            parent = type(self).get_or_create(self.project, data['parents'][0]['sha'])
+        else:
+            parent = None
+
+        self.parent = parent
+        self.datetime = datetime
+        self.data = type(self).sanitize_github_data(data)
+
     @classmethod
     def get_or_create(cls, project, label):
         """
@@ -98,23 +113,9 @@ class Revision(models.Model):
         try:
             rev = cls.objects.get(project=project, label=label)
         except Revision.DoesNotExist:
-            data = github.get_commit(project.github_user, project.github_repo, label)
-
-            datetime = dateutil.parser.parse(data['commit']['committer']['date'])
-            # LOL MULTIPLE PARENTS HOW DOES GIT WORK
-            # (dont care about the merge commits parent for our system)
-            if data.get('parents'):
-                parent = cls.get_or_create(project, data['parents'][0]['sha'])
-            else:
-                parent = None
-
-            return cls.objects.create(
-                project=project,
-                label=label,
-                datetime=datetime,
-                parent=parent,
-                data=cls.sanitize_github_data(data),
-            )
+            rev = cls(project=project, label=label)
+            rev.update_from_github()
+            rev.save()
 
         return rev
 
@@ -124,14 +125,20 @@ class Revision(models.Model):
 
     @property
     def oneline(self):
+        if not self.data:
+            return ''
         return self.data['commit']['message'].split('\n', 1)[0]
 
     @property
     def summary(self):
+        if not self.data:
+            return ''
         return '\n'.join(self.data['commit']['message'].split('\n', 1)[1:])
 
     @property
     def author(self):
+        if not self.data:
+            return {}
         return self.data['commit']['author']
 
 

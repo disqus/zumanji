@@ -160,3 +160,8 @@ ZUMANJI_CONFIG = {
 
 # curlish -u "dcramer" -X POST https://api.github.com/authorizations -J "scopes=repo"
 GITHUB_ACCESS_TOKEN = None
+
+try:
+    from local_settings import *
+except ImportError:
+    pass

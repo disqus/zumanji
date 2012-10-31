@@ -14,6 +14,5 @@ class Command(BaseCommand):
             for revision in project.revision_set.all():
                 if is_revision(revision.label):
                     print "  Revision %r" % revision
-                    revision.data = {}
-                    if not revision.data:
-                        revision.save()
+                    revision.update_from_github()
+                    revision.save()

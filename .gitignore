@@ -3,3 +3,4 @@
 *.pyc
 /dist
 /example/data
+/example/project/local_settings.py
