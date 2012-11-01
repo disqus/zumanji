@@ -84,14 +84,17 @@ class Revision(models.Model):
 
     @classmethod
     def sanitize_github_data(cls, data):
-        return {
+        result = {
             'commit': data['commit'],
-            'stats': data['stats'],
-            'files': [{'filename': f['filename']} for f in data['files']],
         }
+        if 'stats' in data:
+            result['stats'] = data['stats']
+        if 'files' in data:
+            result['files'] = [{'filename': f['filename']} for f in data['files']]
+        return result
 
     @classmethod
-    def get_or_create(cls, project, label):
+    def get_or_create(cls, project, label, data=None):
         """
         Get a revision, and if it doesnt exist, attempt to pull it from Git.
         """
@@ -100,7 +103,7 @@ class Revision(models.Model):
             created = False
         except Revision.DoesNotExist:
             rev = cls(project=project, label=label)
-            rev.update_from_github()
+            rev.update_from_github(data=data)
             rev.save()
             created = True
 
@@ -128,8 +131,9 @@ class Revision(models.Model):
             return {}
         return self.data['commit']['author']
 
-    def update_from_github(self):
-        data = github.get_commit(self.project.github_user, self.project.github_repo, self.label)
+    def update_from_github(self, data=None):
+        if data is None:
+            data = github.get_commit(self.project.github_user, self.project.github_repo, self.label)
 
         datetime = dateutil.parser.parse(data['commit']['committer']['date'])
         # LOL MULTIPLE PARENTS HOW DOES GIT WORK

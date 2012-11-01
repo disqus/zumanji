@@ -11,10 +11,10 @@ class Command(BaseCommand):
     def handle(self, **options):
         for project in Project.objects.filter(label__contains='/'):
             print "Project %r" % project.label
-            for commit in github.iter_commits(project.github_user, project.github_repo):
-                print "  Revision %r (%s; %s)" % (commit['sha'], commit['commit']['author']['name'],
-                    commit['commit']['committer']['date'])
-                rev, created = Revision.get_or_create(project, commit['sha'])
+            for data in github.iter_commits(project.github_user, project.github_repo):
+                print "  Revision %r (%s; %s)" % (data['sha'], data['commit']['author']['name'],
+                    data['commit']['committer']['date'])
+                rev, created = Revision.get_or_create(project, data['sha'], data=data)
                 if not created and not rev.data:
-                    rev.update_from_github()
+                    rev.update_from_github(data)
                     rev.save()
