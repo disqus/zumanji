@@ -263,7 +263,7 @@ class Test(models.Model):
                 ).order_by('-build__revision__datetime', '-build__datetime')
             else:
                 qs = qs.filter(
-                    build__datetime__lt=self.datetime,
+                    build__datetime__lt=self.build.datetime,
                 ).order_by('-build__datetime')
 
             return qs[0]
@@ -285,7 +285,7 @@ class Test(models.Model):
                 ).order_by('build__revision__datetime', 'build__datetime')
             else:
                 qs = qs.filter(
-                    build__datetime__gt=self.datetime,
+                    build__datetime__gt=self.build.datetime,
                 ).order_by('build__datetime')
             return qs[0]
         except IndexError:
