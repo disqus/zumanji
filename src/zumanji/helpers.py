@@ -5,7 +5,7 @@ from collections import defaultdict
 from django.conf import settings
 from django.utils.datastructures import SortedDict
 from zumanji.github import github
-from zumanji.models import Build, Revision, Test, TestData
+from zumanji.models import Revision, Test, TestData
 
 HISTORICAL_POINTS = 25
 

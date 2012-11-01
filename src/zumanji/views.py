@@ -98,7 +98,12 @@ def view_build(request, project_label, build_id, tag_id=None):
         compare_build = previous_build
 
     changes = get_changes(compare_build, test_list)
-    git_changes = get_git_changes(build, compare_build)
+
+    if compare_build:
+        git_changes = get_git_changes(build, compare_build)
+    else:
+        git_changes = None
+
 
     return render(request, 'zumanji/build.html', {
         'project': project,
