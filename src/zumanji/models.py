@@ -169,7 +169,7 @@ class Build(models.Model):
         if tag:
             filter_args["tags"] = tag
 
-        qs = type(self).objects
+        qs = type(self).objects.filter(**filter_args)
 
         if self.revision.datetime:
             if previous:
@@ -185,12 +185,12 @@ class Build(models.Model):
                 qs = qs.filter(
                     datetime__gt=self.datetime,
                 )
-                order_field = ('-datetime')
+                order_field = ('-datetime',)
             else:
                 qs = qs.filter(
                     datetime__lt=self.datetime,
                 )
-                order_field = ('datetime')
+                order_field = ('datetime',)
 
         try:
             return qs.exclude(
