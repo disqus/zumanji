@@ -27,7 +27,7 @@ def api_auth(func):
 
 
 def index(request):
-    build_qs = Build.objects.order_by('-revision__datetime').select_related('revision')
+    build_qs = Build.objects.order_by('-revision__datetime', '-datetime').select_related('revision')
     project_list = []
     # lol O(N)
     for project in Project.objects.all():
@@ -47,7 +47,7 @@ def view_project(request, project_label):
 
     build_list = list(Build.objects
         .filter(project=project)
-        .order_by('-revision__datetime')
+        .order_by('-revision__datetime', '-datetime')
         .select_related('revision', 'project'))
 
     return render(request, 'zumanji/project.html', {
