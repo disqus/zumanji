@@ -90,21 +90,6 @@ class Revision(models.Model):
             'files': [{'filename': f['filename']} for f in data['files']],
         }
 
-    def update_from_github(self):
-        data = github.get_commit(self.project.github_user, self.project.github_repo, self.label)
-
-        datetime = dateutil.parser.parse(data['commit']['committer']['date'])
-        # LOL MULTIPLE PARENTS HOW DOES GIT WORK
-        # (dont care about the merge commits parent for our system)
-        if data.get('parents'):
-            parent = type(self).get_or_create(self.project, data['parents'][0]['sha'])
-        else:
-            parent = None
-
-        self.parent = parent
-        self.datetime = datetime
-        self.data = type(self).sanitize_github_data(data)
-
     @classmethod
     def get_or_create(cls, project, label):
         """
@@ -141,6 +126,21 @@ class Revision(models.Model):
             return {}
         return self.data['commit']['author']
 
+    def update_from_github(self):
+        data = github.get_commit(self.project.github_user, self.project.github_repo, self.label)
+
+        datetime = dateutil.parser.parse(data['commit']['committer']['date'])
+        # LOL MULTIPLE PARENTS HOW DOES GIT WORK
+        # (dont care about the merge commits parent for our system)
+        if data.get('parents'):
+            parent = type(self).get_or_create(self.project, data['parents'][0]['sha'])
+        else:
+            parent = None
+
+        self.parent = parent
+        self.datetime = datetime
+        self.data = type(self).sanitize_github_data(data)
+
 
 class Build(models.Model):
     project = models.ForeignKey(Project)
@@ -161,7 +161,7 @@ class Build(models.Model):
         self.project = self.revision.project
         super(Build, self).save(*args, **kwargs)
 
-    def _get_temporal_sibling(self, datetime_filter, order_field, tag=None, previous=False):
+    def _get_temporal_sibling(self, tag=None, previous=False):
         filter_args = {
             'project': self.project,
             # datetime_filter: self.revision.datetime
@@ -169,25 +169,41 @@ class Build(models.Model):
         if tag:
             filter_args["tags"] = tag
 
-        qs = type(self).objects.filter(**filter_args)
+        qs = type(self).objects
 
-        if previous:
-            qs = qs.filter(Q(revision=self.revision.parent) | Q(revision__isnull=True))
+        if self.revision.datetime:
+            if previous:
+                qs = qs.filter(
+                    Q(revision=self.revision.parent) | Q(revision__isnull=True)
+                )
+                order_field = ('-revision__datetime', '-datetime')
+            else:
+                qs = qs.filter(revision__parent=self.revision)
+                order_field = ('revision__datetime', 'datetime')
         else:
-            qs = qs.filter(revision__parent=self.revision)
+            if previous:
+                qs = qs.filter(
+                    datetime__gt=self.datetime,
+                )
+                order_field = ('-datetime')
+            else:
+                qs = qs.filter(
+                    datetime__lt=self.datetime,
+                )
+                order_field = ('datetime')
 
         try:
             return qs.exclude(
                 id=self.id,
-            ).select_related('revision').order_by(order_field)[0]
+            ).select_related('revision').order_by(*order_field)[0]
         except IndexError:
             return None
 
     def get_previous_build(self, tag=None):
-        return self._get_temporal_sibling('revision__datetime__lt', "-revision__datetime", tag, previous=True)
+        return self._get_temporal_sibling(tag, previous=True)
 
     def get_next_build(self, tag=None):
-        return self._get_temporal_sibling('revision__datetime__gt', "revision__datetime", tag)
+        return self._get_temporal_sibling(tag)
 
 
 class BuildTag(models.Model):
@@ -233,27 +249,45 @@ class Test(models.Model):
 
     def get_test_in_previous_build(self):
         try:
-            return type(self).objects.filter(
+            qs = type(self).objects.filter(
                 build__project=self.project,
-                build__revision__datetime__lt=self.revision.datetime,
-                build__revision=self.revision.parent,
                 label=self.label,
             ).exclude(
                 build=self.build,
-            ).order_by('-build__revision__datetime')[0]
+            )
+            if self.revision.datetime:
+                qs = qs.filter(
+                    build__revision__datetime__lt=self.revision.datetime,
+                ).filter(
+                    Q(build__revision=self.revision.parent) | Q(build__revision__isnull=True)
+                ).order_by('-build__revision__datetime', '-build__datetime')
+            else:
+                qs = qs.filter(
+                    build__datetime__lt=self.datetime,
+                ).order_by('-build__datetime')
+
+            return qs[0]
         except IndexError:
             return None
 
     def get_test_in_next_build(self):
         try:
-            return type(self).objects.filter(
+            qs = type(self).objects.filter(
                 build__project=self.project,
-                build__revision__datetime__gt=self.revision.datetime,
-                build__revision__parent=self.revision,
                 label=self.label,
             ).exclude(
                 build=self.build,
-            ).order_by('build__revision__datetime')[0]
+            )
+            if self.revision.datetime:
+                qs = qs.filter(
+                    build__revision__datetime__gt=self.revision.datetime,
+                    build__revision__parent=self.revision,
+                ).order_by('build__revision__datetime', 'build__datetime')
+            else:
+                qs = qs.filter(
+                    build__datetime__gt=self.datetime,
+                ).order_by('build__datetime')
+            return qs[0]
         except IndexError:
             return None
 

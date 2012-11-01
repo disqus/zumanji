@@ -7,9 +7,9 @@
     {% if previous_build %}
       <li class="previous">
         {% if tag %}
-          {% url 'zumanji:view_build' project_label=previous_build.project.label tag_id=tag.id build_id=previous_build.id as previous_build_link %}
+          {% url zumanji:view_build project_label=previous_build.project.label tag_id=tag.id build_id=previous_build.id as previous_build_link %}
         {% else %}
-          {% url 'zumanji:view_build' project_label=previous_build.project.label build_id=previous_build.id as previous_build_link %}
+          {% url zumanji:view_build project_label=previous_build.project.label build_id=previous_build.id as previous_build_link %}
         {% endif %}
         <a href="{{ previous_build_link }}" title="{{ previous_build.revision.oneline }} &mdash; {{ previous_build.revision.author.name }}" rel="tooltip" data-placement="bottom">&larr; Previous Build <small>#{{ previous_build.id }} &mdash; {{ previous_build.revision.label }}</small></a>
       </li>
@@ -22,9 +22,9 @@
     {% if next_build %}
       <li class="next">
         {% if tag %}
-          {% url 'zumanji:view_build' project_label=next_build.project.label tag_id=tag.id build_id=next_build.id as next_build_link %}
+          {% url zumanji:view_build project_label=next_build.project.label tag_id=tag.id build_id=next_build.id as next_build_link %}
         {% else %}
-          {% url 'zumanji:view_build' project_label=next_build.project.label build_id=next_build.id as next_build_link %}
+          {% url zumanji:view_build project_label=next_build.project.label build_id=next_build.id as next_build_link %}
         {% endif %}
         <a href="{{ next_build_link }}" title="{{ next_build.revision.oneline }} &mdash; {{ next_build.revision.author.name }}" rel="tooltip" data-placement="bottom">Next Build <small>#{{ next_build.id }} &mdash; {{ next_build.revision.label }}</small> &rarr;</a>
       </li>

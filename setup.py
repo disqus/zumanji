@@ -37,7 +37,7 @@ install_requires = [
 
 setup(
     name='zumanji',
-    version='0.3.6',
+    version='0.3.7',
     author='DISQUS',
     author_email='opensource@disqus.com',
     url='https://github.com/disqus/zumanji',

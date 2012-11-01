@@ -7,8 +7,12 @@
       {% for project, build in project_list %}
         <li class="span6">
           <h4><a href="{% url zumanji:view_project project_label=project.label %}">{{ project.label }}</a></h4>
-            <a href="{% url zumanji:view_build project_label=project.label, build_id=build.id %}">#{{ build.id }} &mdash; {{ build.revision.label }}</a><br>
-            <small>{{ build.revision.oneline }} &mdash; {{ build.revision.author.name }}</small>
+            {% if build %}
+              <a href="{% url zumanji:view_build project_label=project.label, build_id=build.id %}">#{{ build.id }} &mdash; {{ build.revision.label }}</a><br>
+              <small>{{ build.revision.oneline }} &mdash; {{ build.revision.author.name }}</small>
+            {% else %}
+              No builds have been executed.
+            {% endif %}
         </li>
       {% endfor %}
     </ul>
