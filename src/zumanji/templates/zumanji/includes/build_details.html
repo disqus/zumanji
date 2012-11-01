@@ -31,8 +31,6 @@
       <dd>{{ build.revision.label }}{% if build.revision.data %} [<a href="{{ build.revision.details_url }}">git</a>]{% endif %}</dd>
       <dt>Author</dt>
       <dd>{{ build.revision.data.commit.author.name }} ({{ build.revision.data.commit.author.email }})</dd>
-      {# <dt>Changes</dt>
-      <dd>+{{ build.revision.data.stats.additions }} / -{{ build.revision.data.stats.deletions }} ({{ build.revision.data.files|length }} file{% if build.revision.data.files|length != 1 %}s{% endif %})</dd> #}
       <dt>Datetime</dt>
       <dd>{{ build.revision.data.commit.author.date|date_from_iso }}</dd>
       <dt>Message</dt>
