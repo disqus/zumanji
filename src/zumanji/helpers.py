@@ -172,6 +172,6 @@ def get_git_changes(build, previous_build):
         previous_build.revision.label, build.revision.label)
     commits = []
     for commit in results['commits']:
-        revision = Revision.get_or_create(build.project, commit['sha'])
+        revision = Revision.get_or_create(build.project, commit['sha'])[0]
         commits.append(revision)
     return commits

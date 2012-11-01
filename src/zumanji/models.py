@@ -97,12 +97,14 @@ class Revision(models.Model):
         """
         try:
             rev = cls.objects.get(project=project, label=label)
+            created = False
         except Revision.DoesNotExist:
             rev = cls(project=project, label=label)
             rev.update_from_github()
             rev.save()
+            created = True
 
-        return rev
+        return rev, created
 
     @property
     def details_url(self):
@@ -133,7 +135,7 @@ class Revision(models.Model):
         # LOL MULTIPLE PARENTS HOW DOES GIT WORK
         # (dont care about the merge commits parent for our system)
         if data.get('parents'):
-            parent = type(self).get_or_create(self.project, data['parents'][0]['sha'])
+            parent = type(self).get_or_create(self.project, data['parents'][0]['sha'])[0]
         else:
             parent = None
 

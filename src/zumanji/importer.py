@@ -189,7 +189,7 @@ def import_build(data, project=None, revision=None):
     revision = Revision.get_or_create(
         project=project,
         label=revision_label,
-    )
+    )[0]
 
     build, created = Build.objects.get_or_create(
         project=project,

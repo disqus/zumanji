@@ -14,4 +14,7 @@ class Command(BaseCommand):
             for commit in github.iter_commits(project.github_user, project.github_repo):
                 print "  Revision %r (%s; %s)" % (commit['sha'], commit['commit']['author']['name'],
                     commit['commit']['committer']['date'])
-                Revision.get_or_create(project, commit['sha'])
+                rev, created = Revision.get_or_create(project, commit['sha'])
+                if not created and not rev.data:
+                    rev.update_from_github()
+                    rev.save()
