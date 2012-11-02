@@ -74,6 +74,7 @@ class Revision(models.Model):
     label = models.CharField(max_length=64)
     datetime = models.DateTimeField(null=True)
     parent = models.ForeignKey('self', null=True)
+    parent_label = models.CharField(max_length=64, null=True)
     data = GzippedJSONField(default={}, blank=True)
 
     class Meta:
@@ -94,7 +95,7 @@ class Revision(models.Model):
         return result
 
     @classmethod
-    def get_or_create(cls, project, label, data=None):
+    def get_or_create(cls, project, label, data=None, recurse=True):
         """
         Get a revision, and if it doesnt exist, attempt to pull it from Git.
         """
@@ -103,7 +104,7 @@ class Revision(models.Model):
             created = False
         except Revision.DoesNotExist:
             rev = cls(project=project, label=label)
-            rev.update_from_github(data=data)
+            rev.update_from_github(data=data, recurse=recurse)
             rev.save()
             created = True
 
@@ -131,7 +132,7 @@ class Revision(models.Model):
             return {}
         return self.data['commit']['author']
 
-    def update_from_github(self, data=None):
+    def update_from_github(self, data=None, recurse=False):
         if data is None:
             data = github.get_commit(self.project.github_user, self.project.github_repo, self.label)
 
@@ -139,11 +140,20 @@ class Revision(models.Model):
         # LOL MULTIPLE PARENTS HOW DOES GIT WORK
         # (dont care about the merge commits parent for our system)
         if data.get('parents'):
-            parent = type(self).get_or_create(self.project, data['parents'][0]['sha'])[0]
+            parent_sha = data['parents'][0]['sha']
+            if recurse:
+                parent = type(self).get_or_create(self.project, parent_sha, recurse=recurse)[0]
+            else:
+                try:
+                    parent = type(self).objects.get(project=self.project, label=parent_sha)
+                except:
+                    parent = None
         else:
             parent = None
+            parent_sha = None
 
         self.parent = parent
+        self.parent_label = parent_sha
         self.datetime = datetime
         self.data = type(self).sanitize_github_data(data)
 
