@@ -166,12 +166,21 @@ def get_changes(previous_build, objects):
 
 
 def get_git_changes(build, previous_build):
+    # TODO: reenable this when it doesnt hit github on each request
+    return None
+
     project = build.project
 
-    results = github.compare_commits(project.github_user, project.github_repo,
-        previous_build.revision.label, build.revision.label)
+    try:
+        results = github.compare_commits(project.github_user, project.github_repo,
+            previous_build.revision.label, build.revision.label)
+    except Exception:
+        # XXX: likely we hit rate limit
+        return None
+
     commits = []
     for commit in results['commits']:
         revision = Revision.get_or_create(build.project, commit['sha'])[0]
         commits.append(revision)
-    return commits
+
+    return reversed(commits)

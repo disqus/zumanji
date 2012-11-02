@@ -28,7 +28,15 @@
   <div class="span6">
     <dl class="dl-horizontal">
       <dt>Revision</dt>
-      <dd>{{ build.revision.label }}{% if build.revision.data %} [<a href="{{ build.revision.details_url }}">git</a>]{% endif %}</dd>
+      <dd>
+        {{ build.revision.label }}{% if build.revision.data %} [<a href="{{ build.revision.details_url }}">git</a>]{% endif %}
+        {% with build.revision.get_parents as parents %}
+          {% if parents %}
+            <br><small>{{ parents|length }} parent{% if parents|length != 1 %}s{% endif %}:
+              {% for parent in parents %}{{ parent }}{% if not forloop.last %}, {% endif %}{% endfor %}</small>
+          {% endif %}
+        {% endwith %}
+      </dd>
       <dt>Author</dt>
       <dd>{{ build.revision.data.commit.author.name }} ({{ build.revision.data.commit.author.email }})</dd>
       <dt>Datetime</dt>
