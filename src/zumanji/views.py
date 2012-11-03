@@ -69,7 +69,7 @@ def view_tag(request, project_label, tag_id):
 
 
 def view_revision(request, project_label, revision_label):
-    revision = get_object_or_404(Build, project__label=project_label, label=revision_label)
+    revision = get_object_or_404(Revision, project__label=project_label, label=revision_label)
     project = revision.project
     previous_revision = revision.get_previous_revision()
     next_revision = revision.get_next_revision()

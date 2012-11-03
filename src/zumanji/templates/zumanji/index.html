@@ -8,7 +8,7 @@
         <li class="span6">
           <h4><a href="{% url zumanji:view_project project_label=project.label %}">{{ project.label }}</a></h4>
             {% if revision %}
-              <a href="{% url zumanji:view_revision project_label=project.label, revision_id=build.id %}">{{ revision.label }}</a><br>
+              <a href="{% url zumanji:view_revision project_label=project.label, revision_label=revision.label %}">{{ revision.label }}</a><br>
               <small>{{ revision.oneline }} &mdash; {{ revision.author.name }}</small>
             {% else %}
               No builds have been executed.
