@@ -27,15 +27,11 @@ def api_auth(func):
 
 
 def index(request):
-    build_qs = Build.objects.order_by('-revision__datetime', '-datetime').select_related('revision')
     project_list = []
     # lol O(N)
     for project in Project.objects.all():
-        try:
-            latest_build = build_qs.filter(project=project)[0]
-        except IndexError:
-            latest_build = None
-        project_list.append((project, latest_build))
+        latest_revision = project.get_latest_revision()
+        project_list.append((project, latest_revision))
 
     return render(request, 'zumanji/index.html', {
         'project_list': project_list,
@@ -72,6 +68,45 @@ def view_tag(request, project_label, tag_id):
     })
 
 
+def view_revision(request, project_label, revision_label):
+    revision = get_object_or_404(Build, project__label=project_label, label=revision_label)
+    project = revision.project
+    previous_revision = revision.get_previous_revision()
+    next_revision = revision.get_next_revision()
+
+    test_list = list(revision.test_set
+        .filter(parent__isnull=True)
+        .order_by('-upper90_duration'))
+
+    compare_with = request.GET.get('compare_with')
+    if compare_with:
+        try:
+            compare_build = Build.objects.get(project__label=project_label, id=compare_with)
+        except Build.DoesNotExist:
+            compare_build = None
+    else:
+        compare_build = previous_build
+
+    changes = get_changes(compare_build, test_list)
+
+    if compare_build:
+        git_changes = get_git_changes(build, compare_build)
+    else:
+        git_changes = None
+
+    return render(request, 'zumanji/build.html', {
+        'project': project,
+        'tag': tag,
+        'build': build,
+        'previous_build': previous_build,
+        'compare_build': compare_build,
+        'next_build': next_build,
+        'test_list': test_list,
+        'changes': changes,
+        'git_changes': git_changes,
+    })
+
+
 def view_build(request, project_label, build_id, tag_id=None):
     filter_args = dict(project__label=project_label, id=build_id)
     tag = None
@@ -103,7 +138,6 @@ def view_build(request, project_label, build_id, tag_id=None):
         git_changes = get_git_changes(build, compare_build)
     else:
         git_changes = None
-
 
     return render(request, 'zumanji/build.html', {
         'project': project,

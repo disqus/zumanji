@@ -69,6 +69,12 @@ class Project(models.Model):
     def github_repo(self):
         return self.label.split('/', 1)[1]
 
+    def get_latest_revision(self):
+        try:
+            return self.revision_set.filter(num_builds__gt=0).order_by('-datetime')[0]
+        except IndexError:
+            return None
+
 
 class Revision(models.Model):
     project = models.ForeignKey(Project)
