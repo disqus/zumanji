@@ -1,7 +1,8 @@
 import base64
 import dateutil.parser
 from django.db import models
-from django.db.models import Q
+from django.db.models import F
+from django.db.models.signals import post_save
 from django.utils import simplejson
 from zumanji.github import github
 
@@ -74,6 +75,7 @@ class Revision(models.Model):
     label = models.CharField(max_length=64)
     datetime = models.DateTimeField(null=True)
     data = GzippedJSONField(default={}, blank=True)
+    num_builds = models.PositiveIntegerField(default=0)
 
     class Meta:
         unique_together = (('project', 'label'),)
@@ -163,9 +165,9 @@ class RevisionParent(models.Model):
 
 class Build(models.Model):
     project = models.ForeignKey(Project)
-    revision = models.ForeignKey(Revision)
     datetime = models.DateTimeField()
     num_tests = models.PositiveIntegerField(default=0)
+    revision = models.ForeignKey(Revision)
     total_duration = models.FloatField(default=0.0)
     data = GzippedJSONField(default={}, blank=True)
     result = models.CharField(max_length=16, choices=RESULT_CHOICES, null=True)
@@ -176,59 +178,63 @@ class Build(models.Model):
     def __unicode__(self):
         return unicode(self.datetime)
 
-    def save(self, *args, **kwargs):
-        self.project = self.revision.project
-        super(Build, self).save(*args, **kwargs)
+    # def _get_temporal_sibling(self, tag=None, previous=False):
+    #     filter_args = {
+    #         'project': self.project,
+    #     }
+    #     if tag:
+    #         filter_args["tags"] = tag
 
-    def _get_temporal_sibling(self, tag=None, previous=False):
-        filter_args = {
-            'project': self.project,
-            # datetime_filter: self.revision.datetime
-        }
-        if tag:
-            filter_args["tags"] = tag
+    #     qs = type(self).objects.filter(**filter_args)
 
-        qs = type(self).objects.filter(**filter_args)
+    #     # if datetime is present, it means we've parsed the commit
+    #     parents = self.revision.get_parents()
+    #     if parents:
+    #         if previous:
+    #             qs = qs.filter(
+    #                 revision__label__in=parents,
+    #             )
+    #             order_field = ('-revision__datetime', '-datetime')
+    #         else:
+    #             qs = qs.extra(
+    #                 tables=['zumanji_revisionparent'],
+    #                 where=['zumanji_revisionparent.revision_label = %s'],
+    #                 params=[self.revision.label],
+    #             )
+    #             order_field = ('revision__datetime', 'datetime')
+    #     else:
+    #         if previous:
+    #             qs = qs.filter(
+    #                 datetime__gt=self.datetime,
+    #             )
+    #             order_field = ('-datetime',)
+    #         else:
+    #             qs = qs.filter(
+    #                 datetime__lt=self.datetime,
+    #             )
+    #             order_field = ('datetime',)
 
-        # if datetime is present, it means we've parsed the commit
-        parents = self.revision.get_parents()
-        if parents:
-            if previous:
-                qs = qs.filter(
-                    revision__label__in=parents,
-                )
-                order_field = ('-revision__datetime', '-datetime')
-            else:
-                qs = qs.extra(
-                    tables=['zumanji_revisionparent'],
-                    where=['zumanji_revisionparent.revision_label = %s'],
-                    params=[self.revision.label],
-                )
-                order_field = ('revision__datetime', 'datetime')
-        else:
-            if previous:
-                qs = qs.filter(
-                    datetime__gt=self.datetime,
-                )
-                order_field = ('-datetime',)
-            else:
-                qs = qs.filter(
-                    datetime__lt=self.datetime,
-                )
-                order_field = ('datetime',)
+    #     try:
+    #         return qs.exclude(
+    #             id=self.id,
+    #         ).select_related('revision').order_by(*order_field)[0]
+    #     except IndexError:
+    #         return None
 
-        try:
-            return qs.exclude(
-                id=self.id,
-            ).select_related('revision').order_by(*order_field)[0]
-        except IndexError:
-            return None
+    # def get_previous_build(self, tag=None):
+    #     return self._get_temporal_sibling(tag, previous=True)
 
-    def get_previous_build(self, tag=None):
-        return self._get_temporal_sibling(tag, previous=True)
+    # def get_next_build(self, tag=None):
+    #     return self._get_temporal_sibling(tag)
 
-    def get_next_build(self, tag=None):
-        return self._get_temporal_sibling(tag)
+
+class BuildRevision(models.Model):
+    project = models.ForeignKey(Project)
+    build = models.ForeignKey(Build)
+    revision_label = models.CharField(max_length=64, null=True)
+
+    class Meta:
+        unique_together = (('build', 'revision_label'),)
 
 
 class BuildTag(models.Model):
@@ -359,3 +365,22 @@ class TestData(models.Model):
         self.revision = self.build.revision
         self.project = self.revision.project
         super(TestData, self).save(*args, **kwargs)
+
+
+### Receivers
+
+def update_revision_build_count(instance, created=False, **kwargs):
+    if not created:
+        return
+
+    revision, created = Revision.objects.get_or_create(
+        project=instance.project,
+        label=instance.revision_label,
+        defaults={
+            'num_builds': 1,
+        }
+    )
+    if not created:
+        Revision.objects.filter(id=revision.id).update(num_builds=F('num_builds') + 1)
+
+post_save.connect(update_revision_build_count, sender=BuildRevision)
